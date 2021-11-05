@@ -1,20 +1,8 @@
-[![Build Status](https://travis-ci.com/DiscipleTools/disciple-tools-data-top-off.svg?branch=master)](https://travis-ci.com/DiscipleTools/disciple-tools-data-top-off)
-
-## Dev notes, delete me:
-This is a starter plugin to jumpstart your work with Disciple.Tools.
-Click the "Use this template" button above.
-See instructions for refactoring and getting started in the [wiki](https://github.com/DiscipleTools/disciple-tools-data-top-off/wiki)
-See instructions for creating releases and publishing your plugin: [wiki](https://github.com/DiscipleTools/disciple-tools-data-top-off/wiki)
-In order to display the banner correctly on the Disciple.Tools Community Plugins Site, don't change the 'Plugin Banner' text on line 12; only the URL.
-
-## readme format:
-
-![Plugin Banner](https://raw.githubusercontent.com/DiscipleTools/disciple-tools-data-top-off/b30402d97895e3f911efcb47fb8f29ccd1eb92e5/documentation/banner.png)
+![Plugin Banner](https://raw.githubusercontent.com/prykon/disciple-tools-data-top-off/master/documentation/banner.png)
 
 # Disciple.Tools - Data Top-Off
 
-Description Description Description Description Description Description Description
-Description Description Description Description Description Description Description
+Top-off your data with this smart autofiller.
 
 ## Purpose
 
