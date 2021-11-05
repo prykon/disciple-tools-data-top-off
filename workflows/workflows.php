@@ -5,14 +5,14 @@ if ( ! defined( 'ABSPATH' ) ) {
 } // Exit if accessed directly
 
 /**
- * Class Disciple_Tools_Plugin_Starter_Template_Workflows
+ * Class Disciple_Tools_Data_Top_Off_Workflows
  *
  * @since  1.11.0
  */
-class Disciple_Tools_Plugin_Starter_Template_Workflows {
+class Disciple_Tools_Data_Top_Off_Workflows {
 
     /**
-     * Disciple_Tools_Plugin_Starter_Template_Workflows The single instance of Disciple_Tools_Plugin_Starter_Template_Workflows.
+     * Disciple_Tools_Data_Top_Off_Workflows The single instance of Disciple_Tools_Data_Top_Off_Workflows.
      *
      * @var    object
      * @access private
@@ -21,11 +21,11 @@ class Disciple_Tools_Plugin_Starter_Template_Workflows {
     private static $_instance = null;
 
     /**
-     * Main Disciple_Tools_Plugin_Starter_Template_Workflows Instance
+     * Main Disciple_Tools_Data_Top_Off_Workflows Instance
      *
-     * Ensures only one instance of Disciple_Tools_Plugin_Starter_Template_Workflows is loaded or can be loaded.
+     * Ensures only one instance of Disciple_Tools_Data_Top_Off_Workflows is loaded or can be loaded.
      *
-     * @return Disciple_Tools_Plugin_Starter_Template_Workflows instance
+     * @return Disciple_Tools_Data_Top_Off_Workflows instance
      * @since  1.11.0
      */
     public static function instance() {
@@ -37,7 +37,7 @@ class Disciple_Tools_Plugin_Starter_Template_Workflows {
     }
 
     /**
-     * Disciple_Tools_Plugin_Starter_Template_Workflows constructor.
+     * Disciple_Tools_Data_Top_Off_Workflows constructor.
      */
     public function __construct() {
         add_filter( 'dt_workflows', [ $this, 'fetch_default_workflows_filter' ], 10, 2 );
@@ -61,7 +61,7 @@ class Disciple_Tools_Plugin_Starter_Template_Workflows {
             case 'groups':
                 $this->build_default_workflows_groups( $workflows );
                 break;
-            case 'starter_post_type':
+            case 'top_off_post_type':
                 $this->build_default_workflows_starter( $workflows );
                 break;
         }
@@ -76,7 +76,7 @@ class Disciple_Tools_Plugin_Starter_Template_Workflows {
     }
 
     private function build_default_workflows_starter( &$workflows ) {
-        $dt_fields = DT_Posts::get_post_field_settings( 'starter_post_type' );
+        $dt_fields = DT_Posts::get_post_field_settings( 'top_off_post_type' );
 
         $workflows[] = (object) [
             'id'         => 'starter_00001',
@@ -97,8 +97,8 @@ class Disciple_Tools_Plugin_Starter_Template_Workflows {
             'actions'    => [
                 Disciple_Tools_Workflows_Defaults::new_action( Disciple_Tools_Workflows_Defaults::$action_update,
                     [
-                        'id'    => 'disciple_tools_plugin_starter_template_text',
-                        'label' => $dt_fields['disciple_tools_plugin_starter_template_text']['name']
+                        'id'    => 'Disciple_Tools_Data_Top_Off_text',
+                        'label' => $dt_fields['Disciple_Tools_Data_Top_Off_text']['name']
                     ], [
                         'id'    => 'Auto Filled By Workflow Engine',
                         'label' => 'Auto Filled By Workflow Engine'
@@ -109,4 +109,4 @@ class Disciple_Tools_Plugin_Starter_Template_Workflows {
     }
 }
 
-Disciple_Tools_Plugin_Starter_Template_Workflows::instance();
+Disciple_Tools_Data_Top_Off_Workflows::instance();
