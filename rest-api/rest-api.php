@@ -22,21 +22,26 @@ class Disciple_Tools_Data_Top_Off_Endpoints
         $namespace = 'disciple-tools-data-top-off/v1';
 
         register_rest_route(
-            $namespace, '/endpoint', [
+            $namespace, '/update_gender/(?P<id>\d+)/(?P<gender>\w+)', [
                 'methods'  => "GET",
-                'callback' => [ $this, 'endpoint' ],
-                'permission_callback' => function( WP_REST_Request $request ) {
-                    return $this->has_permission();
-                },
+                'callback' => [ $this, 'update_gender' ],
+                // 'permission_callback' => function( WP_REST_Request $request ) {
+                //     return $this->has_permission();
+                // },
             ]
         );
     }
 
 
-    public function endpoint( WP_REST_Request $request ) {
-
-        // @todo run your function here
-
+    public function update_gender( WP_REST_Request $request ) {
+        $params = $request->get_params();
+        $id = esc_sql( $params['id'] );
+        $gender = esc_sql( $params['gender'] );
+        $genders_list = [ 'male', 'female' ];
+        if ( ! in_array( $gender, $genders_list ) ) {
+            return false;
+        }
+        update_post_meta( $id, 'gender', $gender );
         return true;
     }
 
