@@ -356,27 +356,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 beforeSend: function(xhr) {
                     xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
                     },
-                success: function(response) {
-                    jQuery('#my-admin-message').after('<div class="error notice is-dismissible"><p>' + adminMessage + '</p><button id="my-dismiss-admin-message" class="notice-dismiss" type="button"><span class="screen-reader-text">Dismiss this notice.</span></button></div>');
-                    jQuery("#my-dismiss-admin-message").click(function(event) {
-                        event.preventDefault();
-                        jQuery('.' + 'error').fadeTo(100, 0, function() {
-                            jQuery('.' + 'error').slideUp(100, function() {
-                                jQuery('.' + 'error').remove();
-                            });
-                        });
-                    });
-                    switch (adminMessageColor) {
-                    case 'yellow':
-                        jQuery("div.error").css("border-left", "4px solid #ffba00");
-                        break;
-                    case 'red':
-                        jQuery("div.error").css("border-left", "4px solid #dd3d36");
-                        break;
-                    default:
-                        jQuery("div.error").css("border-left", "4px solid #7ad03a");
-                    }
-                }
             } );
             jQuery('#contact-' + id ).remove();
         } );
