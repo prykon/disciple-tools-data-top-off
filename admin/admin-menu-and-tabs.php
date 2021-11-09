@@ -135,6 +135,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
 
     public function main_column() {
         ?>
+        <?php self::show_genderless_count(); ?>
         <!-- Box -->
         <table class="widefat striped">
             <thead>
@@ -181,7 +182,17 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             <tbody>
             <tr>
                 <td>
-                    Content
+                    In order to easily top-off your contact gender data, you can select from two autocomplete methods:
+                    <br>
+                    <br>
+                    <b>1. Name Dictionary:</b>
+                    <br>
+                    Autocomplete popular names with their known gender.
+                    <br>
+                    <br>
+                    <b>2. Namesakes</b>
+                    <br>
+                    Use less popular contact names that have their gender set in your Disciple.Tools instance to autocomplete other contacts with the same names.
                 </td>
             </tr>
             </tbody>
@@ -224,7 +235,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 LEFT JOIN $wpdb->posts p
                 ON pm.post_id = p.ID
                 WHERE pm.post_id NOT IN (
-                     SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'gender'
+                     SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'gender' AND meta_value IN ( 'male', 'female' )
                 )
                 AND p.post_type = 'contacts';"
             )
@@ -244,8 +255,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         );
 
         foreach ( $contact_ids as $id ) {
-            $full_name = strtolower( get_the_title( $id ) );
-            $first_name = explode( ' ', $full_name )[0];
+            $first_name = self::get_first_name( $id );
             $gender = get_post_meta( $id, 'gender' );
             $name_genders[ $first_name ] = $gender;
         }
@@ -259,47 +269,19 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         return $output;
     }
 
-    private function get_gender_from_id( $id ) {
-        global $wpdb;
-        $full_name = strtolower( get_the_title( $id ) );
-        $first_name = explode( ' ', $full_name )[0];
-        $result = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT pm.meta_value
-                FROM $wpdb->posts p
-                LEFT JOIN $wpdb->postmeta pm
-                ON p.ID = pm.post_id
-                WHERE pm.meta_key = 'gender'
-                AND LOWER( p.post_title ) LIKE %s;", $first_name . '%' )
-        );
-        return $result;
+    public function show_genderless_count() {
+        $genderless = self::get_genderless_contacts();
+        ?>
+        <div >There are currently <b><?php echo count( $genderless ); ?> contacts</b> that need their gender set.</div>
+        <br>
+        <?php
     }
-
-    private function get_ids_by_name( $name ) {
-        global $wpdb;
-        $result = $wpdb->get_var(
-            $wpdb->prepare(
-                "SELECT ID
-                FROM $wpdb->posts
-                WHERE LOWER( post_title ) LIKE '\s%'
-                ", $name )
-        );
-        return $result;
-    }
-
-    private function get_first_name_from_id( $id ) {
-        $full_name = strtolower( get_the_title( $id ) );
-        $first_name = explode( ' ', $full_name )[0];
-        return $first_name;
-    }
-
     public function show_dictionary_table() {
         $genderless = self::get_genderless_contacts();
         $genderable = [];
 
         foreach ( $genderless as $gid ) {
-            $full_name = strtolower( get_the_title( $gid ) );
-            $first_name = explode( ' ', $full_name )[0];
+            $first_name = self::get_first_name( $gid );
             if ( $first_name ) {
                 $gender = self::get_gender( $first_name );
                 if ( $gender ) {
@@ -323,7 +305,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         ?>
         <form method="post">
             <input type="hidden" name="accept_all_dictionary_nonce" id="accept_all_dictionary_nonce" value="<?php echo esc_attr( wp_create_nonce( 'dictionary_add_all' ) ) ?>" />
-            <div >There are currently <b><?php echo count( $genderless ); ?> contacts</b> that need their gender set.</div>
             <?php
             if ( empty( $genderable ) || wp_verify_nonce( sanitize_key( $_POST['accept_all_dictionary_nonce'] ), 'dictionary_add_all' ) ) {
                 ?>
@@ -332,7 +313,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 return;
             }
             ?>
-            <div><b><?php echo count( $genderable ); ?></b> can be filled automatically from a name dictionary. <button name="set_all_names">Accept all</button></div>
+            <div><b><?php echo count( $genderable ); ?></b> can be filled automatically from a name dictionary. <button name="dictionary_add_all">Accept all</button></div>
             <br>
             <table class="widefat striped">
                 <thead>
@@ -354,7 +335,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                     <tr>
                         <td><?php echo esc_html( $name ); ?></td>
                         <td><?php echo esc_html( $gender ); ?></td>
-                        <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-gender="' . esc_attr( $genderless_id ) .'" data-id="' . esc_attr( $gender ) . '">Accept</a>'; } ?></td>
+                        <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-gender="' . esc_attr( $genderless_id ) .'" data-id="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( "/contacts/$genderless_id" ); ?>" target="_blank">view</a></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -379,31 +360,50 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         <?php
     }
 
-    // If a name has a gender set and another contact has the same name, suggest the same gender
-    public function show_namesake_table() {
-        $genderable_contacts = self::get_genderless_contacts();
-        $name_genders = self::get_names_with_gender();
+    private function get_namesake_table_data( $genderable_contacts, $name_genders ) {
         $namesake_table = [];
-
-
         foreach ( $genderable_contacts as $id ) {
-            $full_name = strtolower( get_the_title( $id ) );
-            $first_name = explode( ' ', $full_name )[0];
+            $first_name = self::get_first_name( $id );
             if ( array_key_exists( $first_name, $name_genders ) ) {
                 $namesake_table[ $first_name ] = $name_genders[ $first_name ];
             }
         }
+        return $namesake_table;
+    }
+
+    // If a name has a gender set and another contact has the same name, suggest the same gender
+    public function show_namesake_table() {
+        $genderable_contacts = self::get_genderless_contacts();
+        $name_genders = self::get_names_with_gender();
+        $namesake_table = self::get_namesake_table_data( $genderable_contacts, $name_genders );
+
+
 
 
         $namesakable_names = [];
         foreach ( $namesake_table as $name => $gender ) {
             $namesakable_names[] = self::get_ungendered_by_name( $name );
         }
-
         $count_sub_namesakes = count( $namesakable_names, COUNT_RECURSIVE ) - count( $namesakable_names );
 
 
+        // Accept all namesake gender suggestions was clicked
+        if ( isset( $_POST['accept_all_namesakes_nonce'], $_POST['accept_all_namesakes_nonce'] ) ) {
+            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_all_namesakes_nonce'] ), 'namesakes_add_all' ) ) {
+                return;
+            }
 
+            foreach ( $namesakable_names as $contact ) {
+                foreach ( $contact as $c ) {
+                    $first_name = self::get_first_name( $c->ID );
+                    $gender = $namesake_table[$first_name];
+                    update_post_meta( $c->ID, 'gender', $gender );
+                }
+            }
+            self::admin_notice( $count_sub_namesakes . __( ' contacts updated.', 'disciple_tools' ), "success" );
+            $genderable_contacts = self::get_genderless_contacts();
+            $namesake_table = self::get_namesake_table_data( $genderable_contacts, $name_genders ); // Refresh namesake_table ids for table
+        }
 
         if ( count( $namesake_table ) === 0 ) {
             ?>
@@ -414,26 +414,13 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
 
         if ( count( $namesake_table ) > 0 ) {
             ?>
-            <div><b><?php echo esc_html( count( $namesake_table ) ); ?></b> names (<b><?php echo esc_html( $count_sub_namesakes ); ?></b> contacts) can have their gender set automatically from gendered contacts with the same name.  <button name="set_all_names">Accept all</button></div>
-            <br>
+            <form method="post">
+                <input type="hidden" name="accept_all_namesakes_nonce" id="accept_all_namesakes_nonce" value="<?php echo esc_attr( wp_create_nonce( 'namesakes_add_all' ) ) ?>" />
+                <div><b><?php echo esc_html( count( $namesake_table ) ); ?></b> names (<b><?php echo esc_html( $count_sub_namesakes ); ?></b> contacts) can have their gender set automatically from gendered contacts with the same name.  <button name="namesakes_add_all">Accept all</button></div>
+                <br>
             <?php
         }
-
-        // Accept all namesake gender suggestions was clicked
-        if ( isset( $_POST['accept_all_namesakes_nonce'], $_POST['accept_all_namesakes_nonce'] ) ) {
-            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_all_namesakes_nonce'] ), 'namesakes_add_all' ) ) {
-                return;
-            }
-
-            foreach ( $genderable as $id => $gender ) {
-                update_post_meta( $id, 'gender', $gender );
-            }
-            $genderless = self::get_genderless_contacts(); // Refresh genderless ids for table
-            self::admin_notice( count( $genderable ) . __( ' contacts updated.', 'disciple_tools' ), "success" );
-        }
         ?>
-        <form method="post">
-            <input type="hidden" name="accept_all_namesakes_nonce" id="accept_all_namesakes_nonce" value="<?php echo esc_attr( wp_create_nonce( 'namesakes_add_all' ) ) ?>" />
             <table class="widefat striped">
                 <thead>
                     <tr>
@@ -447,7 +434,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                     <tr>
                         <td colspan="3"><b><?php echo esc_html( ucwords( $name ) ); ?></b></td>
                         <td>
-                            <button>Accept all <?php echo esc_html( ucwords( $name ) ); ?></button>
+                            <button name="namesakes_add_all_<?php echo esc_attr( $name ); ?>">Accept all <?php echo esc_html( ucwords( $name ) ); ?></button>
                         </td>
                     </tr>
                         <?php
@@ -457,7 +444,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                             <td></td>
                             <td><?php echo esc_html( $ungendered_name->name ); ?></td>
                             <td><?php echo esc_html( $gender ); ?></td>
-                            <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-gender="' . esc_attr( $genderless_id ) .'" data-id="' . esc_attr( $gender ) . '">Accept</a>'; } ?></td>
+                            <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-gender="' . esc_attr( $ungendered_name->ID ) .'" data-id="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/'. $ungendered_name->ID ); ?>" target="_blank">view</a></td>
                         </tr>
                         <?php endforeach; ?>
                         <tr>
@@ -481,6 +468,13 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             )
         );
         return $result;
+    }
+
+    private function get_first_name( $id ) {
+        $full_name = strtolower( get_the_title( $id ) );
+        $first_name = explode( ' ', $full_name )[0];
+        $first_name = str_replace( ',', '', $first_name );
+        return $first_name;
     }
 
     private function get_gender( $name ) {
