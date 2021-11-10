@@ -77,7 +77,7 @@ class Disciple_Tools_Data_Top_Off_Menu {
             <h2 class="nav-tab-wrapper">
                 <a href="<?php echo esc_attr( $link ) . 'gender' ?>"
                    class="nav-tab <?php echo esc_html( ( $tab == 'gender' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>">Gender</a>
-                <a href="<?php echo esc_attr( $link ) . 'second' ?>" class="nav-tab <?php echo esc_html( ( $tab == 'second' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>">Second</a>
+                <a href="<?php echo esc_attr( $link ) . 'location' ?>" class="nav-tab <?php echo esc_html( ( $tab == 'location' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>">Location</a>
             </h2>
 
             <?php
@@ -86,8 +86,8 @@ class Disciple_Tools_Data_Top_Off_Menu {
                     $object = new Disciple_Tools_Data_Top_Off_Tab_Gender();
                     $object->content();
                     break;
-                case "second":
-                    $object = new Disciple_Tools_Data_Top_Off_Tab_Second();
+                case "location":
+                    $object = new Disciple_Tools_Data_Top_Off_Tab_Location();
                     $object->content();
                     break;
                 default:
@@ -200,29 +200,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         <br>
         <!-- End Box -->
         <?php
-    }
-
-    private function get_ids( $post_type ) {
-        global $wpdb;
-        $response = $wpdb->get_col(
-            $wpdb->prepare( "
-                SELECT ID
-                FROM wp_posts
-                WHERE post_type = %s;", $post_type )
-        );
-        return $response;
-    }
-
-    private function get_postmeta_value( $post_id, $meta_key ) {
-        global $wpdb;
-        $response = $wpdb->get_var(
-            $wpdb->prepare( "
-                SELECT meta_value
-                FROM $wpdb->postmeta
-                WHERE post_id = %d
-                AND meta_key = %s;", $post_id, $meta_key )
-        );
-        return $response;
     }
 
     // Get contacts that don't have a gender set
@@ -534,9 +511,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
 
 
 /**
- * Class Disciple_Tools_Data_Top_Off_Tab_Second
+ * Class Disciple_Tools_Data_Top_Off_Tab_Location
  */
-class Disciple_Tools_Data_Top_Off_Tab_Second {
+class Disciple_Tools_Data_Top_Off_Tab_Location {
     public function content() {
         ?>
         <div class="wrap">
