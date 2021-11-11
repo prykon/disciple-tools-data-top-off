@@ -321,7 +321,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             </table>
         </form>
         <script>
-        // Create a new quick comment
+        // Assign gender to a contact
         jQuery( '.accept_gender' ).on( 'click', function () {
             var id = jQuery( this ).data( 'id' );
             var gender = jQuery( this ).data( 'gender' );
@@ -547,18 +547,35 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         <table class="widefat striped">
             <thead>
                 <tr>
-                    <th>Header</th>
+                    <th>Contact Locations from Group Assistance</th>
                 </tr>
             </thead>
             <tbody>
                 <tr>
                     <td>
-                        Content
+                        <?php self::show_location_table(); ?>
                     </td>
                 </tr>
             </tbody>
         </table>
         <br>
+        <script>
+            // Assign location to a contact
+            jQuery( '.accept_location' ).on( 'click', function () {
+                var id = jQuery( this ).data( 'id' );
+                var location = jQuery( this ).data( 'location' );
+                jQuery.ajax( {
+                    type: "GET",
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_location/' + id + '/' + location,
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
+                        },
+                } );
+                jQuery('#contact-' + id ).remove();
+            } );
+        </script>
         <!-- End Box -->
         <?php
     }
@@ -575,7 +592,10 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             <tbody>
             <tr>
                 <td>
-                    Content
+                    <b>Contact Locations from Group Assistance</b>
+                    <br>
+                    <br>
+                    If a contact doesn't have a set location but attends a group or church that does have a set location, we can infer that that contact is also in that area.
                 </td>
             </tr>
             </tbody>
@@ -583,6 +603,70 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         <br>
         <!-- End Box -->
         <?php
+    }
+
+    private function show_location_table() {
+        global $wpdb;
+        $result = $wpdb->get_results( "
+            SELECT p2p.p2p_to as group_id, p2p.p2p_from as contact_id, pm.meta_value as group_location
+            FROM wp_p2p p2p
+              INNER JOIN wp_postmeta pm
+                ON pm.post_id = p2p.p2p_to
+            WHERE p2p.p2p_type = 'contacts_to_groups'
+            AND pm.meta_key = 'location_grid'
+            " );
+
+        foreach ( $result as $r ){
+            $r->contact_location = get_post_meta( $r->contact_id, 'location_grid' )[0];
+        }
+
+        $display_output = false; // Only show the output table if there are results
+        $output = "<table class=\"widefat striped\">
+            <thead>
+                <tr>
+                    <th colspan=\"2\">Name</th>
+                    <th>Autofill to</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>";
+
+        $unique_group_ids = array_unique( array_column( $result, 'group_id' ) );
+
+        // Loop groups
+        foreach ( $unique_group_ids as $group_id ) {
+            $first_row = true;
+            $display_group_output = false;
+            // Loop group members
+            foreach ( $result as $r ) {
+                if ( $r->group_id === $group_id ) {
+                    // If there's a group member without a set location
+                    if ( is_null( $r->contact_location ) ) {
+                        $display_output = true;
+                        $display_group_output = true;
+                        if ( $first_row ) {
+                            $output .= "<tr><td colspan=\"4\">" . get_the_title( $group_id ) . "(" . $group_id .")</td></tr>";
+                            $first_row = false;
+                        }
+                        $output .=
+                            "<tr id=\"contact-" . $r->contact_id . "\">
+                                <td></td>
+                                <td>" . esc_html( get_the_title( $r->contact_id ) ) . " (" . $r->contact_id .")</td>
+                                <td>" . esc_html( Disciple_Tools_Mapping_Queries::get_by_grid_id( $r->group_location )['name'] ) . "</td>
+                                <td><a href=\"#\" class=\"accept_location\" data-id=\"" . esc_attr( $r->contact_id ) . "\" data-location=\"" . esc_attr( $r->group_location ) . "\">accept</a> | <a href=\"/contacts/" . $r->contact_id ."\" target=\"_blank\">view</a></td>
+                            </tr>";
+                    }
+                }
+            }
+            if ( $display_group_output ) {
+                $output .= '<tr><td colspan="4"><hr></td></tr>';
+            }
+        }
+        $output .= "</tbody></table>";
+        if ( ! $display_output ) {
+            $output = "<div>There are no contacts without a set location that attend a group with a set location.</div>";
+        }
+        echo $output;
     }
 }
 
