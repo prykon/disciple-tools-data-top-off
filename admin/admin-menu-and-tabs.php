@@ -648,18 +648,47 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         return $result;
     }
 
+    private function get_locationless_group_members( $group_id ) {
+        global $wpdb;
+        $result = $wpdb->get_col(
+            $wpdb->prepare( "
+                SELECT p2p_from
+                FROM $wpdb->p2p
+                WHERE p2p_to = %d
+                AND p2p_type = 'contacts_to_groups'
+                AND p2p_from NOT IN (
+                    SELECT post_id
+                    FROM $wpdb->postmeta
+                    WHERE meta_key = 'location_grid'
+                );", $group_id )
+        );
+        return $result;
+    }
+
+    private function set_location_for_group_members( $group_id ) {
+        $group_id = esc_sql( sanitize_key( $group_id ) );
+        //Get group location
+        $location = get_post_meta( $group_id, 'location_grid' )[0];
+
+        //Get group members without location
+        $locationless_members = self::get_locationless_group_members( $group_id );
+
+        //Update location for members
+        foreach ( $locationless_members as $member_id ) {
+            update_post_meta( $member_id, 'location_grid', $location );
+        }
+    }
     private function show_location_table() {
-        // Accept all dictionary gender suggestions was clicked
-        if ( isset( $_POST['accept_location_nonce'], $_POST['accept_location_nonce'] ) ) {
+        // Accept all location suggestions for a specific group was clicked
+        if ( isset( $_POST['accept_location_nonce'] ) && isset( $_POST['locations_specific_group'] ) ) {
             if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_location_nonce'] ), 'location_add_all' ) ) {
                 return;
             }
 
-            // foreach ( $genderable as $id => $gender ) {
-            //     update_post_meta( $id, 'gender', $gender );
-            // }
-            // $genderless = self::get_genderless_contacts(); // Refresh genderless ids for table
-            Disciple_Tools_Data_Top_Off_Menu::admin_notice( /* $updates_count . */ __( ' locations updated.', 'disciple_tools' ), "success" );
+            $group_id = esc_sql( sanitize_key( $_POST['locations_specific_group'] ) );
+            $updates_count = count( self::get_locationless_group_members( $group_id ) );
+            self::set_location_for_group_members( $group_id );
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' locations updated.', 'disciple_tools' ), "success" );
         }
 
         $result = self::get_missing_location_group_members();
