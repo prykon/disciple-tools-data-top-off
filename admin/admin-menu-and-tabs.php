@@ -727,6 +727,23 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         echo $output;
         ?>
         </form>
+        <script>
+            // Assign location to a contact
+            jQuery( '.accept_location' ).on( 'click', function () {
+                var id = jQuery( this ).data( 'id' );
+                var location = jQuery( this ).data( 'location' );
+                jQuery.ajax( {
+                    type: "GET",
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_location/' + id + '/' + location,
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
+                        },
+                } );
+                jQuery('#contact-' + id ).remove();
+            } );
+        </script>
         <?php
     }
 }
