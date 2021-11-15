@@ -644,6 +644,11 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                 ON pm.post_id = p2p.p2p_to
             WHERE p2p.p2p_type = 'contacts_to_groups'
             AND pm.meta_key = 'location_grid'
+            AND p2p.p2p_from NOT IN (
+                SELECT post_id
+                FROM $wpdb->postmeta
+                WHERE meta_key = 'location_grid'
+                )
             " );
         return $result;
     }
