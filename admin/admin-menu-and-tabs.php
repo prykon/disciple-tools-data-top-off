@@ -94,9 +94,20 @@ class Disciple_Tools_Data_Top_Off_Menu {
                     break;
             }
             ?>
-
         </div><!-- End wrap -->
+        <?php
+    }
 
+    /**
+     * Display admin notice
+     * @param $notice string
+     * @param $type string error|success|warning
+     */
+    public static function admin_notice( string $notice, string $type ) {
+        ?>
+        <div class="notice notice-<?php echo esc_attr( $type ) ?> is-dismissible">
+            <p><?php echo esc_html( $notice ) ?></p>
+        </div>
         <?php
     }
 }
@@ -112,11 +123,40 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             <div id="poststuff">
                 <div id="post-body" class="metabox-holder columns-2">
                     <div id="post-body-content">
-                        <!-- Main Column -->
-
-                        <?php $this->main_column() ?>
-
-                        <!-- End Main Column -->
+                        <?php self::show_genderless_count(); ?>
+                        <!-- Start Dictionary Table -->
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th>Genders from Name Dictionary</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <?php self::show_dictionary_table(); ?>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- End Dictionary Table -->
+                        <br>
+                        <!-- Start Namesake Table -->
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th>Genders from Namesakes</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <?php self::show_namesake_table(); ?>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- End Namesake Table -->
                     </div><!-- end post-body-content -->
                     <div id="postbox-container-1" class="postbox-container">
                         <!-- Right Column -->
@@ -130,43 +170,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 </div><!-- post-body meta box container -->
             </div><!--poststuff end -->
         </div><!-- wrap end -->
-        <?php
-    }
-
-    public function main_column() {
-        ?>
-        <?php self::show_genderless_count(); ?>
-        <!-- Box -->
-        <table class="widefat striped">
-            <thead>
-                <tr>
-                    <th>Genders from Name Dictionary</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <?php self::show_dictionary_table(); ?>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <br>
-        <table class="widefat striped">
-            <thead>
-                <tr>
-                    <th>Genders from Namesakes</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td>
-                        <?php self::show_namesake_table(); ?>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-        <!-- End Box -->
         <?php
     }
 
@@ -212,9 +215,10 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 LEFT JOIN $wpdb->posts p
                 ON pm.post_id = p.ID
                 WHERE pm.post_id NOT IN (
-                     SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'gender' AND meta_value IN ( 'male', 'female' )
+                    SELECT post_id FROM $wpdb->postmeta WHERE meta_key = 'gender' AND meta_value IN ( 'male', 'female' )
                 )
-                AND p.post_type = 'contacts';"
+                AND p.post_type = 'contacts'
+                ORDER BY p.post_title ASC;"
             )
         );
         return $result;
@@ -227,7 +231,8 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         $contact_ids = $wpdb->get_col( "
             SELECT DISTINCT( post_id )
             FROM $wpdb->postmeta
-            WHERE meta_key = 'gender';
+            WHERE meta_key = 'gender'
+            AND meta_value IN ('male', 'female');
             "
         );
 
@@ -246,6 +251,8 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         return $output;
     }
 
+
+
     public function show_genderless_count() {
         $genderless = self::get_genderless_contacts();
         ?>
@@ -253,6 +260,8 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         <br>
         <?php
     }
+
+
     public function show_dictionary_table() {
         $genderless = self::get_genderless_contacts();
         $genderable = [];
@@ -274,12 +283,11 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_dictionary_nonce'] ), 'dictionary_add_all' ) ) {
                 return;
             }
-
             foreach ( $genderable as $id => $gender ) {
                 update_post_meta( $id, 'gender', $gender );
             }
             $genderless = self::get_genderless_contacts(); // Refresh genderless ids for table
-            self::admin_notice( $updates_count . __( ' contacts updated.', 'disciple_tools' ), "success" );
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' contacts updated.', 'disciple_tools' ), "success" );
         }
         ?>
         <form method="post">
@@ -287,12 +295,17 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             <?php
             if ( empty( $genderable ) || wp_verify_nonce( sanitize_key( $_POST['accept_dictionary_nonce'] ), 'dictionary_add_all' ) ) {
                 ?>
-                <div>No contact names can be filled automatically from the name dictionary.</div>
+                <div>
+                    No contact names can be filled automatically from the name dictionary.
+                </div>
                 <?php
                 return;
             }
             ?>
-            <div><b><?php echo count( $genderable ); ?></b> can be filled automatically from a name dictionary. <button name="dictionary_add_all">Accept all</button></div>
+            <div>
+                <b><?php echo count( $genderable ); ?></b> contact genders can be filled automatically from a name dictionary.
+                <button name="dictionary_add_all">Accept all</button>
+            </div>
             <br>
             <table class="widefat striped">
                 <thead>
@@ -321,21 +334,21 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             </table>
         </form>
         <script>
-        // Assign gender to a contact
-        jQuery( '.accept_gender' ).on( 'click', function () {
-            var id = jQuery( this ).data( 'id' );
-            var gender = jQuery( this ).data( 'gender' );
-            jQuery.ajax( {
-                type: "GET",
-                contentType: "application/json; charset=utf-8",
-                dataType: "json",
-                url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_gender/' + id + '/' + gender,
-                beforeSend: function(xhr) {
-                    xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
-                    },
+            // Assign gender to a contact
+            jQuery( '.accept_gender' ).on( 'click', function () {
+                var id = jQuery( this ).data( 'id' );
+                var gender = jQuery( this ).data( 'gender' );
+                jQuery.ajax( {
+                    type: "GET",
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_gender/' + id + '/' + gender,
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
+                        },
+                } );
+                jQuery('#contact-' + id ).remove();
             } );
-            jQuery('#contact-' + id ).remove();
-        } );
         </script>
         <?php
     }
@@ -344,7 +357,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         $namesake_table = [];
         foreach ( $genderable_contacts as $id ) {
             $first_name = self::get_first_name( $id );
-            if ( array_key_exists( $first_name, $name_genders ) ) {
+            if ( array_key_exists( $first_name, $name_genders ) && $first_name !== '' ) {
                 $namesake_table[ $first_name ] = $name_genders[ $first_name ];
             }
         }
@@ -377,7 +390,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                     $updates_count ++;
                 }
             }
-            self::admin_notice( $updates_count . __( ' contacts updated.', 'disciple_tools' ), "success" );
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' contacts updated.', 'disciple_tools' ), "success" );
             $genderable_contacts = self::get_genderless_contacts();
             $namesake_table = self::get_namesake_table_data( $genderable_contacts, $name_genders ); // Refresh namesake_table ids for table
         }
@@ -385,7 +398,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
 
         // Accept specific namesake gender suggestions was clicked
         if ( isset( $_POST['accept_namesakes_nonce'], $_POST['namesakes_specific_name'] ) ) {
-            echo "Specific button was clicked.";
+
             if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_namesakes_nonce'] ), 'namesakes_nonce' ) ) {
                 return;
             }
@@ -402,7 +415,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                     }
                 }
             }
-            self::admin_notice( $updates_count . __( ' contacts updated.', 'disciple_tools' ), "success" );
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' contacts updated.', 'disciple_tools' ), "success" );
             $genderable_contacts = self::get_genderless_contacts();
             $namesake_table = self::get_namesake_table_data( $genderable_contacts, $name_genders ); // Refresh namesake_table ids for table
         }
@@ -419,7 +432,10 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             ?>
             <form method="post">
                 <input type="hidden" name="accept_namesakes_nonce" id="accept_namesakes_nonce" value="<?php echo esc_attr( wp_create_nonce( 'namesakes_nonce' ) ) ?>" />
-                <div><b><?php echo esc_html( count( $namesake_table ) ); ?></b> names (<b><?php echo esc_html( $count_sub_namesakes ); ?></b> contacts) can have their gender set automatically from gendered contacts with the same name.  <button name="namesakes_add_all">Accept all</button></div>
+                <div>
+                    <b><?php echo esc_html( count( $namesake_table ) ); ?></b> names (<b><?php echo esc_html( $count_sub_namesakes ); ?></b> contacts) can have their gender set automatically from gendered contacts with the same name.
+                    <button name="namesakes_add_all">Accept all</button>
+                </div>
                 <br>
             <?php
         }
@@ -435,20 +451,22 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 <tbody>
                     <?php foreach ( $namesake_table as $name => $gender ) : ?>
                     <tr>
-                        <td colspan="3"><b><?php echo esc_html( ucwords( $name ) ); ?></b></td>
+                        <td colspan="3">
+                            <b><?php echo esc_html( ucwords( $name ) ); ?></b>
+                        </td>
                         <td>
                             <button name="namesakes_specific_name" value="<?php echo esc_attr( $name ); ?>">Accept all <?php echo esc_html( ucwords( $name ) ); ?></button>
                         </td>
                     </tr>
                         <?php
-                        $ungendered_by_name = self::get_ungendered_by_name( $name );
+                            $ungendered_by_name = self::get_ungendered_by_name( $name );
                         foreach ( $ungendered_by_name as $ungendered_name ) : ?>
-                        <tr>
-                            <td></td>
-                            <td><?php echo esc_html( $ungendered_name->name ); ?></td>
-                            <td><?php echo esc_html( $gender ); ?></td>
-                            <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $ungendered_name->ID ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/'. $ungendered_name->ID ); ?>" target="_blank">view</a></td>
-                        </tr>
+                            <tr id="contact-<?php echo esc_attr( $ungendered_name->ID );?>">
+                                <td></td>
+                                <td><?php echo esc_html( $ungendered_name->name ); ?></td>
+                                <td><?php echo esc_html( $gender ); ?></td>
+                                <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $ungendered_name->ID ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/'. $ungendered_name->ID ); ?>" target="_blank">view</a></td>
+                            </tr>
                         <?php endforeach; ?>
                         <tr>
                             <td colspan="4">
@@ -457,7 +475,25 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                         </tr>
                     <?php endforeach; ?>
                 </tbody>
+            </table>
         </form>
+        <script>
+            // Assign gender to a contact
+            jQuery( '.accept_gender' ).on( 'click', function () {
+                var id = jQuery( this ).data( 'id' );
+                var gender = jQuery( this ).data( 'gender' );
+                jQuery.ajax( {
+                    type: "GET",
+                    contentType: "application/json; charset=utf-8",
+                    dataType: "json",
+                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_gender/' + id + '/' + gender,
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
+                        },
+                } );
+                jQuery('#contact-' + id ).remove();
+            } );
+        </script>
         <?php
     }
 
@@ -467,7 +503,13 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             $wpdb->prepare(
                 "SELECT ID, post_title AS name
                 FROM $wpdb->posts
-                WHERE LOWER( post_title ) LIKE %s;", $name . '%'
+                WHERE LOWER( post_title ) LIKE %s
+                AND ID NOT IN (
+                    SELECT post_id
+                    FROM $wpdb->postmeta
+                    WHERE meta_key = 'gender'
+                    AND meta_value IN ('male', 'female')
+                );", $name . '%'
             )
         );
         return $result;
@@ -493,19 +535,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 return 'female';
             }
         }
-    }
-
-    /**
-     * Display admin notice
-     * @param $notice string
-     * @param $type string error|success|warning
-     */
-    public static function admin_notice( string $notice, string $type ) {
-        ?>
-        <div class="notice notice-<?php echo esc_attr( $type ) ?> is-dismissible">
-            <p><?php echo esc_html( $notice ) ?></p>
-        </div>
-        <?php
     }
 }
 
@@ -551,6 +580,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                 </tr>
             </thead>
             <tbody>
+                <br>
                 <tr>
                     <td>
                         <?php self::show_location_table(); ?>
@@ -559,23 +589,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             </tbody>
         </table>
         <br>
-        <script>
-            // Assign location to a contact
-            jQuery( '.accept_location' ).on( 'click', function () {
-                var id = jQuery( this ).data( 'id' );
-                var location = jQuery( this ).data( 'location' );
-                jQuery.ajax( {
-                    type: "GET",
-                    contentType: "application/json; charset=utf-8",
-                    dataType: "json",
-                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_location/' + id + '/' + location,
-                    beforeSend: function(xhr) {
-                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
-                        },
-                } );
-                jQuery('#contact-' + id ).remove();
-            } );
-        </script>
         <!-- End Box -->
         <?php
     }
@@ -605,7 +618,24 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         <?php
     }
 
-    private function show_location_table() {
+    private function get_locationless_count( $post_type ) {
+        global $wpdb;
+        $missing_location_count = 0;
+        $result = $wpdb->get_col(
+            $wpdb->prepare( "
+                SELECT ID
+                FROM $wpdb->posts
+                WHERE post_type = %s ", $post_type )
+        );
+        foreach ( $result as $r ) {
+            if ( ! get_post_meta( $r, 'location_grid' ) ) {
+                $missing_location_count ++;
+            }
+        }
+        return $missing_location_count;
+    }
+
+    private function get_missing_location_group_members() {
         global $wpdb;
         $result = $wpdb->get_results( "
             SELECT p2p.p2p_to as group_id, p2p.p2p_from as contact_id, pm.meta_value as group_location
@@ -615,13 +645,38 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             WHERE p2p.p2p_type = 'contacts_to_groups'
             AND pm.meta_key = 'location_grid'
             " );
+        return $result;
+    }
+
+    private function show_location_table() {
+        // Accept all dictionary gender suggestions was clicked
+        if ( isset( $_POST['accept_location_nonce'], $_POST['accept_location_nonce'] ) ) {
+            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_location_nonce'] ), 'location_add_all' ) ) {
+                return;
+            }
+
+            // foreach ( $genderable as $id => $gender ) {
+            //     update_post_meta( $id, 'gender', $gender );
+            // }
+            // $genderless = self::get_genderless_contacts(); // Refresh genderless ids for table
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( /* $updates_count . */ __( ' locations updated.', 'disciple_tools' ), "success" );
+        }
+
+        $result = self::get_missing_location_group_members();
 
         foreach ( $result as $r ){
             $r->contact_location = get_post_meta( $r->contact_id, 'location_grid' )[0];
         }
 
         $display_output = false; // Only show the output table if there are results
-        $output = "<table class=\"widefat striped\">
+        ?>
+        <form method="post">
+            <input type="hidden" name="accept_location_nonce" id="accept_location_nonce" value="<?php echo esc_attr( wp_create_nonce( 'location_add_all' ) ) ?>" />
+        <?php
+        $output = "
+        <div><b>" . count( self::get_missing_location_group_members() ) . "</b> contact locations can be filled automatically their attending group's location.</div>
+        <div>Please note that a contact can attend more than one group. <button name=\"locations_add_all\">Accept all</button><br><br></div>
+        <table class=\"widefat striped\">
             <thead>
                 <tr>
                     <th colspan=\"2\">Name</th>
@@ -636,6 +691,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         // Loop groups
         foreach ( $unique_group_ids as $group_id ) {
             $first_row = true;
+            $count = 0;
             $display_group_output = false;
             // Loop group members
             foreach ( $result as $r ) {
@@ -645,7 +701,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                         $display_output = true;
                         $display_group_output = true;
                         if ( $first_row ) {
-                            $output .= "<tr><td colspan=\"4\">" . get_the_title( $group_id ) . "(" . $group_id .")</td></tr>";
+                            $output .= "<tr><td colspan=\"3\"><a href=\"/groups/" . $group_id . "\" target=\"_blank\">" . get_the_title( $group_id ) . "</a></td>
+                            <td><button name=\"locations_specific_group\" value=\"" . esc_attr( $group_id ) . "\">Accept these</button></td>
+                            </tr>";
                             $first_row = false;
                         }
                         $output .=
@@ -667,6 +725,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             $output = "<div>There are no contacts without a set location that attend a group with a set location.</div>";
         }
         echo $output;
+        ?>
+        </form>
+        <?php
     }
 }
 
