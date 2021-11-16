@@ -684,9 +684,24 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         }
     }
     private function show_location_table() {
-        // Accept all location suggestions for a specific group was clicked
+        // Accept all location suggestions was clicked
+        if ( isset( $_POST['accept_location_nonce'] ) && isset( $_POST['locations_add_all'] ) ) {
+            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_location_nonce'] ), 'location_nonce' ) ) {
+                return;
+            }
+
+            $result = self::get_missing_location_group_members();
+            $updates_count = count( $result );
+            $unique_group_ids = array_unique( array_column( $result, 'group_id' ) );
+            foreach ( $unique_group_ids as $group_id ) {
+                self::set_location_for_group_members( $group_id );
+            }
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' locations updated.', 'disciple_tools' ), "success" );
+        }
+
+        // Accept location suggestions for a specific group was clicked
         if ( isset( $_POST['accept_location_nonce'] ) && isset( $_POST['locations_specific_group'] ) ) {
-            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_location_nonce'] ), 'location_add_all' ) ) {
+            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_location_nonce'] ), 'location_nonce' ) ) {
                 return;
             }
 
@@ -695,6 +710,8 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             self::set_location_for_group_members( $group_id );
             Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' locations updated.', 'disciple_tools' ), "success" );
         }
+
+
 
         $result = self::get_missing_location_group_members();
 
@@ -705,7 +722,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         $display_output = false; // Only show the output table if there are results
         ?>
         <form method="post">
-            <input type="hidden" name="accept_location_nonce" id="accept_location_nonce" value="<?php echo esc_attr( wp_create_nonce( 'location_add_all' ) ) ?>" />
+            <input type="hidden" name="accept_location_nonce" id="accept_location_nonce" value="<?php echo esc_attr( wp_create_nonce( 'location_nonce' ) ) ?>" />
         <?php
         $output = "
         <div><b>" . count( self::get_missing_location_group_members() ) . "</b> contact locations can be filled automatically their attending group's location.</div>
