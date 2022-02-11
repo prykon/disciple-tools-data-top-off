@@ -6,24 +6,18 @@ Top-off your data with this smart autofiller.
 
 ## Purpose
 
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
-
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
-Purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose purpose
+Many times, incomplete data is added to the Disciple.Tools system. This plugin allows you to update specific missing information in bulk.
 
 ## Usage
 
 #### Will Do
 
-- Item
-- Item
-- Item
+- Autoupdate contact gender based on name
+- Autoupdate contact gender based on contacts with same name
 
 #### Will Not Do
 
-- Item
-- Item
+- Update information without previous confirmation
 
 ## Requirements
 
