@@ -36,8 +36,3 @@ in the [Discussions](https://github.com/DiscipleTools/disciple-tools-data-top-of
 code contributions are welcome using the [Pull Request](https://github.com/DiscipleTools/disciple-tools-data-top-off/pulls)
 system for git. For a more details on contribution see the
 [contribution guidelines](https://github.com/DiscipleTools/disciple-tools-data-top-off/blob/master/CONTRIBUTING.md).
-
-
-## Screenshots
-
-![screenshot](documentation/community/starter-banners/banner-blue-green.png)

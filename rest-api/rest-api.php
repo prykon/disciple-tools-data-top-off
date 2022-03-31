@@ -30,8 +30,17 @@ class Disciple_Tools_Data_Top_Off_Endpoints
                 // },
             ]
         );
-    }
 
+        register_rest_route(
+            $namespace, '/update_location/(?P<id>\d+)/(?P<location>\w+)', [
+                'methods' => "GET",
+                'callback' => [ $this, 'update_location' ],
+                // 'permission_callback' => function( WP_REST_Request $request ) {
+                //     return $this->has_permission();
+                // },
+            ]
+        );
+    }
 
     public function update_gender( WP_REST_Request $request ) {
         $params = $request->get_params();
@@ -42,6 +51,14 @@ class Disciple_Tools_Data_Top_Off_Endpoints
             return false;
         }
         update_post_meta( $id, 'gender', $gender );
+        return true;
+    }
+
+    public function update_location( WP_REST_Request $request ) {
+        $params = $request->get_params();
+        $id = esc_sql( $params['id'] );
+        $location = esc_sql( $params['location'] );
+        update_post_meta( $id, 'location_grid', $location );
         return true;
     }
 
