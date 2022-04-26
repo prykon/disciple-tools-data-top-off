@@ -157,6 +157,23 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                             </tbody>
                         </table>
                         <!-- End Namesake Table -->
+                        <br>
+                        <!-- Start E-mail Inference Table -->
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th>Name Inference from E-mails</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <?php self::show_email_inference_table(); ?>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- End E-mail Inference Table -->
                     </div><!-- end post-body-content -->
                     <div id="postbox-container-1" class="postbox-container">
                         <!-- Right Column -->
@@ -209,7 +226,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
     private function get_genderless_contacts() {
         global $wpdb;
         $result = $wpdb->get_col(
-            $wpdb->prepare(
                 "SELECT DISTINCT ( pm.post_id )
                 FROM $wpdb->postmeta pm
                 LEFT JOIN $wpdb->posts p
@@ -219,7 +235,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 )
                 AND p.post_type = 'contacts'
                 ORDER BY p.post_title ASC;"
-            )
         );
         return $result;
     }
@@ -227,7 +242,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
     // Get contact names that already have at least one gender set
     private function get_names_with_gender() {
         global $wpdb;
-
         $contact_ids = $wpdb->get_col( "
             SELECT DISTINCT( post_id )
             FROM $wpdb->postmeta
@@ -258,6 +272,86 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         ?>
         <div >There are currently <b><?php echo count( $genderless ); ?> contacts</b> that need their gender set.</div>
         <br>
+        <?php
+    }
+
+    public function get_name_email_data() {
+        global $wpdb;
+        return $wpdb->get_results( "SELECT p.ID AS contact_id, LOWER( p.post_title ) AS name, LOWER( pm.meta_value ) AS email, 'foo' AS inference
+            FROM $wpdb->posts p
+            RIGHT JOIN $wpdb->postmeta pm
+            ON p.ID = pm.post_id
+            WHERE pm.meta_key LIKE 'contact_email%'
+            AND pm.meta_key NOT LIKE '%_details'
+            AND pm.meta_value != '';
+        ", ARRAY_A );
+    }
+
+    public function get_email_inferences( $data ) {
+        $output = [];
+        foreach( $data as $d ) {
+            $name = trim( $d['name'] );
+            $email = $d['email'];
+            $email = preg_replace('/\d+|_|\-|\./u', '', $email); // Remove numbers and special characters from email username
+            preg_match( '/^(.*?)@.*$/', $email, $email_username );
+
+            // If there's an email username we can work with
+            if ( isset( $email_username[1] ) ) {
+                $inference = $email_username[1];
+                $inference = str_replace( $name, $name . ' ', $inference );
+                $inference = trim($inference);
+
+                $email_without_name = trim( str_replace( $name, '', $inference ) );
+                if ( strlen( $inference ) > strlen( $email_without_name ) ) {
+                    // Check for emails with initials, such as jdoe@email.com
+                    
+                    $inference = $name . ' ' . $email_without_name;
+                    
+                    if ( strlen( $email_without_name ) === 1 ) {
+                        $inference = $email_without_name . '. ' . $name;
+                    }
+
+                    $inference = ucwords( $inference );
+                    $output[] = [
+                        'contact_id' => $d['contact_id'],
+                        'email' => $d['email'],
+                        'name' => get_the_title( $d['contact_id'] ),
+                        'inference'=> $inference,
+                    ];
+                }
+                
+
+            }
+        }
+        return $output;
+    }
+
+    public function show_email_inference_table() {
+        $name_email_data = self::get_name_email_data();
+        $email_inferences = self::get_email_inferences( $name_email_data );
+        ?>
+        <form method="post">
+            <table class="widefat striped">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>E-Mail</th>
+                        <th>Autofill to</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $email_inferences as $email_inference ) : ?>
+                    <tr id="contact-<?php echo esc_attr( $email_inference['contact_id'] ); ?>">
+                        <td><?php echo esc_html( $email_inference['name'] ); ?></td>
+                        <td><?php echo esc_html( $email_inference['email'] ); ?></td>
+                        <td><?php echo esc_html( $email_inference['inference'] ); ?></td>
+                        <td><?php if ( $email_inference['inference'] ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $email_inference['contact_id'] ) .'" data-inference="' . esc_attr( $email_inference['inference'] ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/' .$email_inference['contact_id'] ); ?>" target="_blank">view</a></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </form>
         <?php
     }
 
@@ -293,7 +387,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         <form method="post">
             <input type="hidden" name="accept_dictionary_nonce" id="accept_dictionary_nonce" value="<?php echo esc_attr( wp_create_nonce( 'dictionary_add_all' ) ) ?>" />
             <?php
-            if ( empty( $genderable ) || wp_verify_nonce( sanitize_key( $_POST['accept_dictionary_nonce'] ), 'dictionary_add_all' ) ) {
+            if ( empty( $genderable ) || ( isset( $_POST['accept_dictionary_nonce'] ) && wp_verify_nonce( sanitize_key( $_POST['accept_dictionary_nonce'] ), 'dictionary_add_all' ) ) ) {
                 ?>
                 <div>
                     No contact names can be filled automatically from the name dictionary.
