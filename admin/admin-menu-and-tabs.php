@@ -226,7 +226,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
     private function get_genderless_contacts() {
         global $wpdb;
         $result = $wpdb->get_col(
-                "SELECT DISTINCT ( pm.post_id )
+            "SELECT DISTINCT ( pm.post_id )
                 FROM $wpdb->postmeta pm
                 LEFT JOIN $wpdb->posts p
                 ON pm.post_id = p.ID
@@ -289,24 +289,23 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
 
     public function get_email_inferences( $data ) {
         $output = [];
-        foreach( $data as $d ) {
+        foreach ( $data as $d ) {
             $name = trim( $d['name'] );
             $email = $d['email'];
-            $email = preg_replace('/\d+|_|\-|\./u', '', $email); // Remove numbers and special characters from email username
+            $email = preg_replace( '/\d+|_|\-|\./u', '', $email ); // Remove numbers and special characters from email username
             preg_match( '/^(.*?)@.*$/', $email, $email_username );
 
             // If there's an email username we can work with
             if ( isset( $email_username[1] ) ) {
                 $inference = $email_username[1];
                 $inference = str_replace( $name, $name . ' ', $inference );
-                $inference = trim($inference);
+                $inference = trim( $inference );
 
                 $email_without_name = trim( str_replace( $name, '', $inference ) );
                 if ( strlen( $inference ) > strlen( $email_without_name ) ) {
                     // Check for emails with initials, such as jdoe@email.com
-                    
                     $inference = $name . ' ' . $email_without_name;
-                    
+
                     if ( strlen( $email_without_name ) === 1 ) {
                         $inference = $email_without_name . '. ' . $name;
                     }
@@ -316,11 +315,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                         'contact_id' => $d['contact_id'],
                         'email' => $d['email'],
                         'name' => get_the_title( $d['contact_id'] ),
-                        'inference'=> $inference,
+                        'inference' => $inference,
                     ];
                 }
-                
-
             }
         }
         return $output;
@@ -342,16 +339,33 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 </thead>
                 <tbody>
                     <?php foreach ( $email_inferences as $email_inference ) : ?>
-                    <tr id="contact-<?php echo esc_attr( $email_inference['contact_id'] ); ?>">
+                    <tr id="contact-name-inference-<?php echo esc_attr( $email_inference['contact_id'] ); ?>">
                         <td><?php echo esc_html( $email_inference['name'] ); ?></td>
                         <td><?php echo esc_html( $email_inference['email'] ); ?></td>
                         <td><?php echo esc_html( $email_inference['inference'] ); ?></td>
-                        <td><?php if ( $email_inference['inference'] ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $email_inference['contact_id'] ) .'" data-inference="' . esc_attr( $email_inference['inference'] ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/' .$email_inference['contact_id'] ); ?>" target="_blank">view</a></td>
+                        <td><?php if ( $email_inference['inference'] ) { echo '<a href="javascript:void(0);" class="accept_inference" data-id="' . esc_attr( $email_inference['contact_id'] ) .'" data-inference="' . esc_attr( $email_inference['inference'] ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/' .$email_inference['contact_id'] ); ?>" target="_blank">view</a></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
             </table>
         </form>
+        <script>
+            // Assign name to a contact
+            jQuery( '.accept_inference' ).on( 'click', function () {
+                var id = jQuery( this ).data( 'id' );
+                var name = jQuery( this ).data( 'inference' );
+                jQuery.ajax( {
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_name/' + id + '/' + name,
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>' );
+                    },
+                } );
+                jQuery( '#contact-name-inference-' + id ).remove();
+            } );
+        </script>
         <?php
     }
 
@@ -421,7 +435,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                     <tr id="contact-<?php echo esc_attr( $genderless_id ); ?>">
                         <td><?php echo esc_html( $name ); ?></td>
                         <td><?php echo esc_html( $gender ); ?></td>
-                        <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $genderless_id ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( "/contacts/$genderless_id" ); ?>" target="_blank">view</a></td>
+                        <td><?php if ( $gender ) { echo '<a href="javascript:void(0);" class="accept_gender" data-id="' . esc_attr( $genderless_id ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( "/contacts/$genderless_id" ); ?>" target="_blank">view</a></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -433,15 +447,15 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 var id = jQuery( this ).data( 'id' );
                 var gender = jQuery( this ).data( 'gender' );
                 jQuery.ajax( {
-                    type: "GET",
-                    contentType: "application/json; charset=utf-8",
-                    dataType: "json",
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
                     url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_gender/' + id + '/' + gender,
                     beforeSend: function(xhr) {
-                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
-                        },
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>' );
+                    },
                 } );
-                jQuery('#contact-' + id ).remove();
+                jQuery( '#contact-' + id ).remove();
             } );
         </script>
         <?php
@@ -559,7 +573,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                                 <td></td>
                                 <td><?php echo esc_html( $ungendered_name->name ); ?></td>
                                 <td><?php echo esc_html( $gender ); ?></td>
-                                <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $ungendered_name->ID ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/'. $ungendered_name->ID ); ?>" target="_blank">view</a></td>
+                                <td><?php if ( $gender ) { echo '<a href="javascript:void(0);" class="accept_gender" data-id="' . esc_attr( $ungendered_name->ID ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/'. $ungendered_name->ID ); ?>" target="_blank">view</a></td>
                             </tr>
                         <?php endforeach; ?>
                         <tr>
@@ -573,13 +587,13 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         </form>
         <script>
             // Assign gender to a contact
-            jQuery( '.accept_gender' ).on( 'click', function () {
+            jQuery( '.accept_gender' ).on( 'click', function() {
                 var id = jQuery( this ).data( 'id' );
                 var gender = jQuery( this ).data( 'gender' );
                 jQuery.ajax( {
-                    type: "GET",
-                    contentType: "application/json; charset=utf-8",
-                    dataType: "json",
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
                     url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_gender/' + id + '/' + gender,
                     beforeSend: function(xhr) {
                         xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
@@ -878,9 +892,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                 var id = jQuery( this ).data( 'id' );
                 var location = jQuery( this ).data( 'location' );
                 jQuery.ajax( {
-                    type: "GET",
-                    contentType: "application/json; charset=utf-8",
-                    dataType: "json",
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
                     url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_location/' + id + '/' + location,
                     beforeSend: function(xhr) {
                         xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
