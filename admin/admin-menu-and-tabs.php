@@ -295,7 +295,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             $email = preg_replace( '/\d+|_|\-|\./u', '', $email ); // Remove numbers and special characters from email username
             preg_match( '/^(.*?)@.*$/', $email, $email_username );
 
-            // If there's an email username we can work with
+            // If there's an email username we can work with...
             if ( isset( $email_username[1] ) ) {
                 $inference = $email_username[1];
                 $inference = str_replace( $name, $name . ' ', $inference );
@@ -309,6 +309,13 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                     if ( strlen( $email_without_name ) === 1 ) {
                         $inference = $email_without_name . '. ' . $name;
                     }
+
+                    $inference = trim( $inference );
+
+                    if ( $name === $inference ) {
+                        continue;
+                    }
+
 
                     $inference = ucwords( $inference );
                     $output[] = [
@@ -326,8 +333,39 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
     public function show_email_inference_table() {
         $name_email_data = self::get_name_email_data();
         $email_inferences = self::get_email_inferences( $name_email_data );
+
+        // Accept all email name inferences was clicked
+        if ( isset( $_POST['accept_email_inference_nonce'], $_POST['accept_email_inference_nonce'] ) ) {
+            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_email_inference_nonce'] ), 'email_inference_add_all' ) ) {
+                return;
+            }
+            foreach ( $email_inferences as $email_inference ) {
+                $post = [
+                    'ID' => $email_inference['contact_id'],
+                    'post_title' => $email_inference['inference'],
+                ];
+                wp_update_post( $post );
+            }
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( count( $email_inferences ) . __( ' contacts updated.', 'disciple_tools' ), "success" );
+            $name_email_data = self::get_name_email_data();
+            $email_inferences = self::get_email_inferences( $name_email_data );
+        }
         ?>
         <form method="post">
+            <input type="hidden" name="accept_email_inference_nonce" value="<?php echo esc_attr( wp_create_nonce( 'email_inference_add_all' ) ) ?>" />
+            <?php
+            if ( count( $email_inferences ) === 0 ) {
+                ?>
+                    <div>No contacts can have their name set automatically from email username inferences.</div>
+                <?php
+                return;
+            }
+            ?>
+            <div>
+                <b><?php echo esc_html( count( $email_inferences ) ); ?> names</b> can be infered from their email address.
+                <button name="email_inference_add_all">Accept all</button>
+            </div>
+            <br>
             <table class="widefat striped">
                 <thead>
                     <tr>
