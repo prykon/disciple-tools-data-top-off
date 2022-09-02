@@ -14,6 +14,7 @@ Many times, incomplete data is added to the Disciple.Tools system. This plugin a
 
 - Autoupdate contact gender based on name
 - Autoupdate contact gender based on contacts with same name
+- Infer contact names from email address
 
 #### Will Not Do
 

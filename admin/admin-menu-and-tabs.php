@@ -35,7 +35,7 @@ class Disciple_Tools_Data_Top_Off_Menu {
      */
     public function __construct() {
 
-        add_action( "admin_menu", array( $this, "register_menu" ) );
+        add_action( 'admin_menu', array( $this, 'register_menu' ) );
 
     } // End __construct()
 
@@ -63,8 +63,8 @@ class Disciple_Tools_Data_Top_Off_Menu {
             wp_die( 'You do not have sufficient permissions to access this page.' );
         }
 
-        if ( isset( $_GET["tab"] ) ) {
-            $tab = sanitize_key( wp_unslash( $_GET["tab"] ) );
+        if ( isset( $_GET['tab'] ) ) {
+            $tab = sanitize_key( wp_unslash( $_GET['tab'] ) );
         } else {
             $tab = 'gender';
         }
@@ -75,18 +75,22 @@ class Disciple_Tools_Data_Top_Off_Menu {
         <div class="wrap">
             <h2>Data Top-Off</h2>
             <h2 class="nav-tab-wrapper">
-                <a href="<?php echo esc_attr( $link ) . 'gender' ?>"
-                   class="nav-tab <?php echo esc_html( ( $tab == 'gender' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>">Gender</a>
-                <a href="<?php echo esc_attr( $link ) . 'location' ?>" class="nav-tab <?php echo esc_html( ( $tab == 'location' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>">Location</a>
+                <a href="<?php echo esc_attr( $link ) . 'name' ?>" class="nav-tab <?php echo esc_html( ( $tab == 'name' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'Names', 'disciple_tools' ); ?></a>
+                <a href="<?php echo esc_attr( $link ) . 'gender' ?>" class="nav-tab <?php echo esc_html( ( $tab == 'gender' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'Gender', 'disciple_tools' ); ?></a>
+                <a href="<?php echo esc_attr( $link ) . 'location' ?>" class="nav-tab <?php echo esc_html( ( $tab == 'location' || !isset( $tab ) ) ? 'nav-tab-active' : '' ); ?>"><?php esc_html_e( 'Location', 'disciple_tools' ); ?></a>
             </h2>
 
             <?php
             switch ( $tab ) {
-                case "gender":
+                case 'name':
+                    $object = new Disciple_Tools_Data_Top_Off_Tab_Name();
+                    $object->content();
+                    break;
+                case 'gender':
                     $object = new Disciple_Tools_Data_Top_Off_Tab_Gender();
                     $object->content();
                     break;
-                case "location":
+                case 'location':
                     $object = new Disciple_Tools_Data_Top_Off_Tab_Location();
                     $object->content();
                     break;
@@ -116,47 +120,29 @@ Disciple_Tools_Data_Top_Off_Menu::instance();
 /**
  * Class Disciple_Tools_Data_Top_Off_Tab_Gender
  */
-class Disciple_Tools_Data_Top_Off_Tab_Gender {
+class Disciple_Tools_Data_Top_Off_Tab_Name {
     public function content() {
         ?>
         <div class="wrap">
             <div id="poststuff">
                 <div id="post-body" class="metabox-holder columns-2">
                     <div id="post-body-content">
-                        <?php self::show_genderless_count(); ?>
-                        <!-- Start Dictionary Table -->
+                        <!-- Start E-mail Inference Table -->
                         <table class="widefat striped">
                             <thead>
                                 <tr>
-                                    <th>Genders from Name Dictionary</th>
+                                    <th><? esc_html_e( 'Name Inference from E-mails', 'disciple_tools_data_top_off' ); ?></th>
                                 </tr>
                             </thead>
                             <tbody>
                                 <tr>
                                     <td>
-                                        <?php self::show_dictionary_table(); ?>
+                                        <?php self::show_email_inference_table(); ?>
                                     </td>
                                 </tr>
                             </tbody>
                         </table>
-                        <!-- End Dictionary Table -->
-                        <br>
-                        <!-- Start Namesake Table -->
-                        <table class="widefat striped">
-                            <thead>
-                                <tr>
-                                    <th>Genders from Namesakes</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <?php self::show_namesake_table(); ?>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <!-- End Namesake Table -->
+                        <!-- End E-mail Inference Table -->
                     </div><!-- end post-body-content -->
                     <div id="postbox-container-1" class="postbox-container">
                         <!-- Right Column -->
@@ -179,23 +165,263 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         <table class="widefat striped">
             <thead>
                 <tr>
-                    <th>Information</th>
+                    <th><?php esc_html_e( 'Information', 'disciple_tools_data_top_off' ); ?></th>
                 </tr>
             </thead>
             <tbody>
             <tr>
                 <td>
-                    In order to easily top-off your contact gender data, you can select from two autocomplete methods:
+                    <?php esc_html_e( "Inferr a contact's name and last name from their e-mail address.", 'disciple_tools_data_top_off' ); ?>
+                </td>
+            </tr>
+            </tbody>
+        </table>
+        <br>
+        <!-- End Box -->
+        <?php
+    }
+
+
+    public function get_name_email_data() {
+        global $wpdb;
+        return $wpdb->get_results( "SELECT p.ID AS contact_id, LOWER( p.post_title ) AS name, LOWER( pm.meta_value ) AS email, 'foo' AS inference
+            FROM $wpdb->posts p
+            RIGHT JOIN $wpdb->postmeta pm
+            ON p.ID = pm.post_id
+            WHERE pm.meta_key LIKE 'contact_email%'
+            AND pm.meta_key NOT LIKE '%_details'
+            AND pm.meta_value != '';
+        ", ARRAY_A );
+    }
+
+    public function get_email_inferences( $data ) {
+        $output = [];
+        foreach ( $data as $d ) {
+            $name = trim( $d['name'] );
+            $email = $d['email'];
+            $email = preg_replace( '/\d+|_|\-|\./u', '', $email ); // Remove numbers and special characters from email username
+            preg_match( '/^(.*?)@.*$/', $email, $email_username );
+
+            // If there's an email username we can work with...
+            if ( isset( $email_username[1] ) ) {
+                $inference = $email_username[1];
+                $inference = str_replace( $name, $name . ' ', $inference );
+                $inference = trim( $inference );
+
+                $email_without_name = trim( str_replace( $name, '', $inference ) );
+                if ( strlen( $inference ) > strlen( $email_without_name ) ) {
+                    // Check for emails with initials, such as jdoe@email.com
+                    $inference = $name . ' ' . $email_without_name;
+
+                    if ( strlen( $email_without_name ) === 1 ) {
+                        $inference = $email_without_name . '. ' . $name;
+                    }
+
+                    $inference = trim( $inference );
+
+                    if ( $name === $inference ) {
+                        continue;
+                    }
+
+
+                    $inference = ucwords( $inference );
+                    $output[] = [
+                        'contact_id' => $d['contact_id'],
+                        'email' => $d['email'],
+                        'name' => get_the_title( $d['contact_id'] ),
+                        'inference' => $inference,
+                    ];
+                }
+            }
+        }
+        return $output;
+    }
+
+    public function show_email_inference_table() {
+        $name_email_data = self::get_name_email_data();
+        $email_inferences = self::get_email_inferences( $name_email_data );
+
+        // Accept all email name inferences was clicked
+        if ( isset( $_POST['accept_email_inference_nonce'], $_POST['accept_email_inference_nonce'] ) ) {
+            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_email_inference_nonce'] ), 'email_inference_add_all' ) ) {
+                return;
+            }
+            foreach ( $email_inferences as $email_inference ) {
+                $post = [
+                    'ID' => $email_inference['contact_id'],
+                    'post_title' => $email_inference['inference'],
+                ];
+                wp_update_post( $post );
+            }
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( count( $email_inferences ) . __( ' contacts updated.', 'disciple_tools' ), "success" );
+            $name_email_data = self::get_name_email_data();
+            $email_inferences = self::get_email_inferences( $name_email_data );
+        }
+        ?>
+        <form method="post">
+            <input type="hidden" name="accept_email_inference_nonce" value="<?php echo esc_attr( wp_create_nonce( 'email_inference_add_all' ) ) ?>" />
+            <?php
+            if ( count( $email_inferences ) === 0 ) {
+                ?>
+                    <div><?php esc_html_e( 'No contacts can have their name set automatically from email username inferences.', 'disciple_tools_data_top_off' ); ?></div>
+                <?php
+                return;
+            }
+            ?>
+            <div>
+                <b><?php echo esc_html( count( $email_inferences ) ); ?> names</b> can be infered from their email address.
+                <button name="email_inference_add_all"><?php esc_html_e( 'Accept all', 'disciple_tools_data_top_off' ); ?></button>
+            </div>
+            <br>
+            <table class="widefat striped">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'E-Mail', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Actions', 'disciple_tools_data_top_off' ); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $email_inferences as $email_inference ) : ?>
+                    <tr id="contact-name-inference-<?php echo esc_attr( $email_inference['contact_id'] ); ?>">
+                        <td><?php echo esc_html( $email_inference['name'] ); ?></td>
+                        <td><?php echo esc_html( $email_inference['email'] ); ?></td>
+                        <td><?php echo esc_html( $email_inference['inference'] ); ?></td>
+                        <td><?php if ( $email_inference['inference'] ) { echo '<a href="javascript:void(0);" class="accept_inference" data-id="' . esc_attr( $email_inference['contact_id'] ) .'" data-inference="' . esc_attr( $email_inference['inference'] ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/' .$email_inference['contact_id'] ); ?>" target="_blank"><?php esc_html_e( 'view', 'disciple_tools_data_top_off' ); ?></a></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </form>
+        <script>
+            // Assign name to a contact
+            jQuery( '.accept_inference' ).on( 'click', function () {
+                var id = jQuery( this ).data( 'id' );
+                var name = jQuery( this ).data( 'inference' );
+                jQuery.ajax( {
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_name/' + id + '/' + name,
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>' );
+                    },
+                } );
+                jQuery( '#contact-name-inference-' + id ).remove();
+            } );
+        </script>
+        <?php
+    }
+
+    private function get_first_name( $id ) {
+        $full_name = strtolower( get_the_title( $id ) );
+        $first_name = explode( ' ', $full_name )[0];
+        $first_name = str_replace( ',', '', $first_name );
+        return $first_name;
+    }
+}
+
+/**
+ * Class Disciple_Tools_Data_Top_Off_Tab_Gender
+ */
+class Disciple_Tools_Data_Top_Off_Tab_Gender {
+    public function content() {
+        ?>
+        <div class="wrap">
+            <div id="poststuff">
+                <div id="post-body" class="metabox-holder columns-2">
+                    <div id="post-body-content">
+                        <?php self::show_genderless_count(); ?>
+                        <!-- Start Dictionary Table -->
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e( 'Genders from Name Dictionary', 'disciple_tools_data_top_off' ); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <?php self::show_dictionary_table(); ?>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- End Dictionary Table -->
+                        <br>
+                        <!-- Start Namesake Table -->
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e( 'Genders from Namesakes', 'disciple_tools_data_top_off' ); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <?php self::show_namesake_table(); ?>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- End Namesake Table -->
+                        <br>
+                        <!-- Start E-mail Inference Table -->
+                        <table class="widefat striped">
+                            <thead>
+                                <tr>
+                                    <th><?php esc_html_e( 'Name Inference from E-mails', 'disciple_tools_data_top_off' ); ?></th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td>
+                                        <?php self::show_email_inference_table(); ?>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                        <!-- End E-mail Inference Table -->
+                    </div><!-- end post-body-content -->
+                    <div id="postbox-container-1" class="postbox-container">
+                        <!-- Right Column -->
+
+                        <?php $this->right_column() ?>
+
+                        <!-- End Right Column -->
+                    </div><!-- postbox-container 1 -->
+                    <div id="postbox-container-2" class="postbox-container">
+                    </div><!-- postbox-container 2 -->
+                </div><!-- post-body meta box container -->
+            </div><!--poststuff end -->
+        </div><!-- wrap end -->
+        <?php
+    }
+
+    public function right_column() {
+        ?>
+        <!-- Box -->
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'Information', 'disciple_tools_data_top_off' ); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+            <tr>
+                <td>
+                    <?php esc_html_e( 'In order to easily top-off your contact gender data, you can select from two autocomplete methods:', 'disciple_tools_data_top_off' ); ?>
                     <br>
                     <br>
-                    <b>1. Name Dictionary:</b>
+                    <b>1. <?php esc_html_e( 'Name Dictionary:', 'disciple_tools_data_top_off' ); ?></b>
                     <br>
-                    Autocomplete popular names with their known gender.
+                    <?php esc_html_e( 'Autocomplete popular names with their known gender.', 'disciple_tools_data_top_off' ); ?>
                     <br>
                     <br>
-                    <b>2. Namesakes</b>
+                    <b>2. <?php esc_html_e( 'Namesakes', 'disciple_tools_data_top_off' ); ?></b>
                     <br>
-                    Use less popular contact names that have their gender set in your Disciple.Tools instance to autocomplete other contacts with the same names.
+                    <?php esc_html_e( 'Use less popular contact names that have their gender set in your Disciple.Tools instance to autocomplete other contacts with the same names.', 'disciple_tools_data_top_off' ); ?>
                 </td>
             </tr>
             </tbody>
@@ -209,8 +435,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
     private function get_genderless_contacts() {
         global $wpdb;
         $result = $wpdb->get_col(
-            $wpdb->prepare(
-                "SELECT DISTINCT ( pm.post_id )
+            "SELECT DISTINCT ( pm.post_id )
                 FROM $wpdb->postmeta pm
                 LEFT JOIN $wpdb->posts p
                 ON pm.post_id = p.ID
@@ -219,7 +444,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 )
                 AND p.post_type = 'contacts'
                 ORDER BY p.post_title ASC;"
-            )
         );
         return $result;
     }
@@ -227,7 +451,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
     // Get contact names that already have at least one gender set
     private function get_names_with_gender() {
         global $wpdb;
-
         $contact_ids = $wpdb->get_col( "
             SELECT DISTINCT( post_id )
             FROM $wpdb->postmeta
@@ -258,6 +481,137 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         ?>
         <div >There are currently <b><?php echo count( $genderless ); ?> contacts</b> that need their gender set.</div>
         <br>
+        <?php
+    }
+
+    public function get_name_email_data() {
+        global $wpdb;
+        return $wpdb->get_results( "SELECT p.ID AS contact_id, LOWER( p.post_title ) AS name, LOWER( pm.meta_value ) AS email, 'foo' AS inference
+            FROM $wpdb->posts p
+            RIGHT JOIN $wpdb->postmeta pm
+            ON p.ID = pm.post_id
+            WHERE pm.meta_key LIKE 'contact_email%'
+            AND pm.meta_key NOT LIKE '%_details'
+            AND pm.meta_value != '';
+        ", ARRAY_A );
+    }
+
+    public function get_email_inferences( $data ) {
+        $output = [];
+        foreach ( $data as $d ) {
+            $name = trim( $d['name'] );
+            $email = $d['email'];
+            $email = preg_replace( '/\d+|_|\-|\./u', '', $email ); // Remove numbers and special characters from email username
+            preg_match( '/^(.*?)@.*$/', $email, $email_username );
+
+            // If there's an email username we can work with...
+            if ( isset( $email_username[1] ) ) {
+                $inference = $email_username[1];
+                $inference = str_replace( $name, $name . ' ', $inference );
+                $inference = trim( $inference );
+
+                $email_without_name = trim( str_replace( $name, '', $inference ) );
+                if ( strlen( $inference ) > strlen( $email_without_name ) ) {
+                    // Check for emails with initials, such as jdoe@email.com
+                    $inference = $name . ' ' . $email_without_name;
+
+                    if ( strlen( $email_without_name ) === 1 ) {
+                        $inference = $email_without_name . '. ' . $name;
+                    }
+
+                    $inference = trim( $inference );
+
+                    if ( $name === $inference ) {
+                        continue;
+                    }
+
+                    $inference = ucwords( $inference );
+                    $output[] = [
+                        'contact_id' => $d['contact_id'],
+                        'email' => $d['email'],
+                        'name' => get_the_title( $d['contact_id'] ),
+                        'inference' => $inference,
+                    ];
+                }
+            }
+        }
+        return $output;
+    }
+
+    public function show_email_inference_table() {
+        $name_email_data = self::get_name_email_data();
+        $email_inferences = self::get_email_inferences( $name_email_data );
+
+        // Accept all email name inferences was clicked
+        if ( isset( $_POST['accept_email_inference_nonce'], $_POST['accept_email_inference_nonce'] ) ) {
+            if ( ! wp_verify_nonce( sanitize_key( $_POST['accept_email_inference_nonce'] ), 'email_inference_add_all' ) ) {
+                return;
+            }
+            foreach ( $email_inferences as $email_inference ) {
+                $post = [
+                    'ID' => $email_inference['contact_id'],
+                    'post_title' => $email_inference['inference'],
+                ];
+                wp_update_post( $post );
+            }
+            Disciple_Tools_Data_Top_Off_Menu::admin_notice( count( $email_inferences ) . __( ' contacts updated.', 'disciple_tools' ), "success" );
+            $name_email_data = self::get_name_email_data();
+            $email_inferences = self::get_email_inferences( $name_email_data );
+        }
+        ?>
+        <form method="post">
+            <input type="hidden" name="accept_email_inference_nonce" value="<?php echo esc_attr( wp_create_nonce( 'email_inference_add_all' ) ) ?>" />
+            <?php
+            if ( count( $email_inferences ) === 0 ) {
+                ?>
+                    <div><?php esc_html_e( 'No contacts can have their name set automatically from email username inferences.', 'disciple_tools_data_top_off' ); ?></div>
+                <?php
+                return;
+            }
+            ?>
+            <div>
+                <b><?php echo esc_html( count( $email_inferences ) ); ?> names</b> can be infered from their email address.
+                <button name="email_inference_add_all"><?php esc_html_e( 'Accept all', 'disciple_tools_data_top_off' ); ?></button>
+            </div>
+            <br>
+            <table class="widefat striped">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'E-Mail', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Actions', 'disciple_tools_data_top_off' ); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ( $email_inferences as $email_inference ) : ?>
+                    <tr id="contact-name-inference-<?php echo esc_attr( $email_inference['contact_id'] ); ?>">
+                        <td><?php echo esc_html( $email_inference['name'] ); ?></td>
+                        <td><?php echo esc_html( $email_inference['email'] ); ?></td>
+                        <td><?php echo esc_html( $email_inference['inference'] ); ?></td>
+                        <td><?php if ( $email_inference['inference'] ) { echo '<a href="javascript:void(0);" class="accept_inference" data-id="' . esc_attr( $email_inference['contact_id'] ) .'" data-inference="' . esc_attr( $email_inference['inference'] ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/' .$email_inference['contact_id'] ); ?>" target="_blank"><?php esc_html_e( 'view', 'disciple_tools_data_top_off' ); ?></a></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </form>
+        <script>
+            // Assign name to a contact
+            jQuery( '.accept_inference' ).on( 'click', function () {
+                var id = jQuery( this ).data( 'id' );
+                var name = jQuery( this ).data( 'inference' );
+                jQuery.ajax( {
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
+                    url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_name/' + id + '/' + name,
+                    beforeSend: function(xhr) {
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>' );
+                    },
+                } );
+                jQuery( '#contact-name-inference-' + id ).remove();
+            } );
+        </script>
         <?php
     }
 
@@ -293,26 +647,24 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         <form method="post">
             <input type="hidden" name="accept_dictionary_nonce" id="accept_dictionary_nonce" value="<?php echo esc_attr( wp_create_nonce( 'dictionary_add_all' ) ) ?>" />
             <?php
-            if ( empty( $genderable ) || wp_verify_nonce( sanitize_key( $_POST['accept_dictionary_nonce'] ), 'dictionary_add_all' ) ) {
+            if ( empty( $genderable ) || ( isset( $_POST['accept_dictionary_nonce'] ) && wp_verify_nonce( sanitize_key( $_POST['accept_dictionary_nonce'] ), 'dictionary_add_all' ) ) ) {
                 ?>
-                <div>
-                    No contact names can be filled automatically from the name dictionary.
-                </div>
+                <div><?php esc_html_e( 'No contact names can be filled automatically from the name dictionary.', 'disciple_tools_data_top_off' ); ?></div>
                 <?php
                 return;
             }
             ?>
             <div>
                 <b><?php echo count( $genderable ); ?></b> contact genders can be filled automatically from a name dictionary.
-                <button name="dictionary_add_all">Accept all</button>
+                <button name="dictionary_add_all"><?php esc_html_e( 'Accept all', 'disciple_tools_data_top_off' ); ?></button>
             </div>
             <br>
             <table class="widefat striped">
                 <thead>
                     <tr>
-                        <th>Name</th>
-                        <th>Autofill to</th>
-                        <th>Action</th>
+                        <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Action', 'disciple_tools_data_top_off' ); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -327,7 +679,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                     <tr id="contact-<?php echo esc_attr( $genderless_id ); ?>">
                         <td><?php echo esc_html( $name ); ?></td>
                         <td><?php echo esc_html( $gender ); ?></td>
-                        <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $genderless_id ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( "/contacts/$genderless_id" ); ?>" target="_blank">view</a></td>
+                        <td><?php if ( $gender ) { echo '<a href="javascript:void(0);" class="accept_gender" data-id="' . esc_attr( $genderless_id ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( "/contacts/$genderless_id" ); ?>" target="_blank"><?php esc_html_e( 'view', 'disciple_tools_data_top_off' ); ?></a></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -339,15 +691,15 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 var id = jQuery( this ).data( 'id' );
                 var gender = jQuery( this ).data( 'gender' );
                 jQuery.ajax( {
-                    type: "GET",
-                    contentType: "application/json; charset=utf-8",
-                    dataType: "json",
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
                     url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_gender/' + id + '/' + gender,
                     beforeSend: function(xhr) {
-                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
-                        },
+                        xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>' );
+                    },
                 } );
-                jQuery('#contact-' + id ).remove();
+                jQuery( '#contact-' + id ).remove();
             } );
         </script>
         <?php
@@ -423,7 +775,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         $count_sub_namesakes = count( $namesakable_names, COUNT_RECURSIVE ) - count( $namesakable_names );
         if ( count( $namesake_table ) === 0 ) {
             ?>
-            <div>No contacts can have their gender set automatically from gendered contacts with the same name.</div>
+            <div><?php esc_html_e( 'No contacts can have their gender set automatically from gendered contacts with the same name.', 'disciple_tools_data_top_off' ); ?></div>
             <?php
             return;
         }
@@ -434,7 +786,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 <input type="hidden" name="accept_namesakes_nonce" id="accept_namesakes_nonce" value="<?php echo esc_attr( wp_create_nonce( 'namesakes_nonce' ) ) ?>" />
                 <div>
                     <b><?php echo esc_html( count( $namesake_table ) ); ?></b> names (<b><?php echo esc_html( $count_sub_namesakes ); ?></b> contacts) can have their gender set automatically from gendered contacts with the same name.
-                    <button name="namesakes_add_all">Accept all</button>
+                    <button name="namesakes_add_all"><?php esc_html_e( 'Accept all', 'disciple_tools_data_top_off' ); ?></button>
                 </div>
                 <br>
             <?php
@@ -443,9 +795,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
             <table class="widefat striped">
                 <thead>
                     <tr>
-                        <th colspan="2">Name</th>
-                        <th>Autofill to</th>
-                        <th>Action</th>
+                        <th colspan="2"><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
+                        <th><?php esc_html_e( 'Action', 'disciple_tools_data_top_off' ); ?></th>
                     </tr>
                 </thead>
                 <tbody>
@@ -455,7 +807,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                             <b><?php echo esc_html( ucwords( $name ) ); ?></b>
                         </td>
                         <td>
-                            <button name="namesakes_specific_name" value="<?php echo esc_attr( $name ); ?>">Accept all <?php echo esc_html( ucwords( $name ) ); ?></button>
+                            <button name="namesakes_specific_name" value="<?php echo esc_attr( $name ); ?>">
+                                <?php esc_html_e( 'Accept all', 'disciple_tools_data_top_off' ); ?> <?php echo esc_html( ucwords( $name ) ); ?>
+                            </button>
                         </td>
                     </tr>
                         <?php
@@ -465,7 +819,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                                 <td></td>
                                 <td><?php echo esc_html( $ungendered_name->name ); ?></td>
                                 <td><?php echo esc_html( $gender ); ?></td>
-                                <td><?php if ( $gender ) { echo '<a href="#" class="accept_gender" data-id="' . esc_attr( $ungendered_name->ID ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/'. $ungendered_name->ID ); ?>" target="_blank">view</a></td>
+                                <td><?php if ( $gender ) { echo '<a href="javascript:void(0);" class="accept_gender" data-id="' . esc_attr( $ungendered_name->ID ) .'" data-gender="' . esc_attr( $gender ) . '">accept</a>'; } ?> | <a href="<?php echo esc_attr( '/contacts/'. $ungendered_name->ID ); ?>" target="_blank"><?php esc_html_e( 'view', 'disciple_tools_data_top_off' ); ?></a></td>
                             </tr>
                         <?php endforeach; ?>
                         <tr>
@@ -479,13 +833,13 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
         </form>
         <script>
             // Assign gender to a contact
-            jQuery( '.accept_gender' ).on( 'click', function () {
+            jQuery( '.accept_gender' ).on( 'click', function() {
                 var id = jQuery( this ).data( 'id' );
                 var gender = jQuery( this ).data( 'gender' );
                 jQuery.ajax( {
-                    type: "GET",
-                    contentType: "application/json; charset=utf-8",
-                    dataType: "json",
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
                     url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_gender/' + id + '/' + gender,
                     beforeSend: function(xhr) {
                         xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );
@@ -576,7 +930,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         <table class="widefat striped">
             <thead>
                 <tr>
-                    <th>Contact Locations from Group Assistance</th>
+                    <th><?php esc_html_e( 'Contact Locations from Group Assistance', 'disciple_tools_data_top_off' ); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -599,16 +953,16 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         <table class="widefat striped">
             <thead>
                 <tr>
-                    <th>Information</th>
+                    <th><?php esc_html_e( 'Information', 'disciple_tools_data_top_off' ); ?></th>
                 </tr>
             </thead>
             <tbody>
             <tr>
                 <td>
-                    <b>Contact Locations from Group Assistance</b>
+                    <b><?php esc_html_e( 'Contact Locations from Group Assistance', 'disciple_tools_data_top_off' ); ?></b>
                     <br>
                     <br>
-                    If a contact doesn't have a set location but attends a group or church that does have a set location, we can infer that that contact is also in that area.
+                    <?php esc_html_e( "If a contact doesn't have a set location but attends a group or church that does have a set location, we can infer that that contact is also in that area.", 'disciple_tools_data_top_off' ); ?>
                 </td>
             </tr>
             </tbody>
@@ -711,8 +1065,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' locations updated.', 'disciple_tools' ), "success" );
         }
 
-
-
         $result = self::get_missing_location_group_members();
 
         foreach ( $result as $r ){
@@ -762,7 +1114,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                                 <td></td>
                                 <td>" . esc_html( get_the_title( $r->contact_id ) ) . " (" . $r->contact_id .")</td>
                                 <td>" . esc_html( Disciple_Tools_Mapping_Queries::get_by_grid_id( $r->group_location )['name'] ) . "</td>
-                                <td><a href=\"#\" class=\"accept_location\" data-id=\"" . esc_attr( $r->contact_id ) . "\" data-location=\"" . esc_attr( $r->group_location ) . "\">accept</a> | <a href=\"/contacts/" . $r->contact_id ."\" target=\"_blank\">view</a></td>
+                                <td><a href=\"#\" class=\"accept_location\" data-id=\"" . esc_attr( $r->contact_id ) . "\" data-location=\"" . esc_attr( $r->group_location ) . "\">accept</a> | <a href=\"/contacts/" . esc_attr( $r->contact_id ) ."\" target=\"_blank\">view</a></td>
                             </tr>";
                     }
                 }
@@ -775,7 +1127,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         if ( ! $display_output ) {
             $output = "<div>There are no contacts without a set location that attend a group with a set location.</div>";
         }
-        echo $output;
+        echo wp_kses_post( $output );
         ?>
         </form>
         <script>
@@ -784,9 +1136,9 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                 var id = jQuery( this ).data( 'id' );
                 var location = jQuery( this ).data( 'location' );
                 jQuery.ajax( {
-                    type: "GET",
-                    contentType: "application/json; charset=utf-8",
-                    dataType: "json",
+                    type: 'POST',
+                    contentType: 'application/json; charset=utf-8',
+                    dataType: 'json',
                     url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/update_location/' + id + '/' + location,
                     beforeSend: function(xhr) {
                         xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ) ?>' );

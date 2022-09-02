@@ -23,21 +23,31 @@ class Disciple_Tools_Data_Top_Off_Endpoints
 
         register_rest_route(
             $namespace, '/update_gender/(?P<id>\d+)/(?P<gender>\w+)', [
-                'methods'  => "GET",
+                'methods'  => 'POST',
                 'callback' => [ $this, 'update_gender' ],
-                // 'permission_callback' => function( WP_REST_Request $request ) {
-                //     return $this->has_permission();
-                // },
+                'permission_callback' => function( WP_REST_Request $request ) {
+                    return $this->has_permission();
+                },
             ]
         );
 
         register_rest_route(
             $namespace, '/update_location/(?P<id>\d+)/(?P<location>\w+)', [
-                'methods' => "GET",
+                'methods' => 'POST',
                 'callback' => [ $this, 'update_location' ],
-                // 'permission_callback' => function( WP_REST_Request $request ) {
-                //     return $this->has_permission();
-                // },
+                'permission_callback' => function( WP_REST_Request $request ) {
+                    return $this->has_permission();
+                },
+            ]
+        );
+
+        register_rest_route(
+            $namespace, '/update_name/(?P<id>\d+)/(?P<name>.+)', [
+                'methods' => 'POST',
+                'callback' => [ $this, 'update_name' ],
+                'permission_callback' => function( WP_REST_Request $request ) {
+                    return $this->has_permission();
+                },
             ]
         );
     }
@@ -59,6 +69,18 @@ class Disciple_Tools_Data_Top_Off_Endpoints
         $id = esc_sql( $params['id'] );
         $location = esc_sql( $params['location'] );
         update_post_meta( $id, 'location_grid', $location );
+        return true;
+    }
+
+    public function update_name( WP_REST_Request $request ) {
+        $params = $request->get_params();
+        $id = esc_sql( $params['id'] );
+        $name = esc_sql( urldecode( $params['name'] ) );
+        $post = [
+            'ID' => $id,
+            'post_title' => $name,
+        ];
+        wp_update_post( $post );
         return true;
     }
 
