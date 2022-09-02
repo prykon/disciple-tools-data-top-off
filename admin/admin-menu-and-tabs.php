@@ -857,8 +857,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             Disciple_Tools_Data_Top_Off_Menu::admin_notice( $updates_count . __( ' locations updated.', 'disciple_tools' ), "success" );
         }
 
-
-
         $result = self::get_missing_location_group_members();
 
         foreach ( $result as $r ){
@@ -908,7 +906,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                                 <td></td>
                                 <td>" . esc_html( get_the_title( $r->contact_id ) ) . " (" . $r->contact_id .")</td>
                                 <td>" . esc_html( Disciple_Tools_Mapping_Queries::get_by_grid_id( $r->group_location )['name'] ) . "</td>
-                                <td><a href=\"#\" class=\"accept_location\" data-id=\"" . esc_attr( $r->contact_id ) . "\" data-location=\"" . esc_attr( $r->group_location ) . "\">accept</a> | <a href=\"/contacts/" . $r->contact_id ."\" target=\"_blank\">view</a></td>
+                                <td><a href=\"#\" class=\"accept_location\" data-id=\"" . esc_attr( $r->contact_id ) . "\" data-location=\"" . esc_attr( $r->group_location ) . "\">accept</a> | <a href=\"/contacts/" . esc_attr( $r->contact_id ) ."\" target=\"_blank\">view</a></td>
                             </tr>";
                     }
                 }
@@ -921,7 +919,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         if ( ! $display_output ) {
             $output = "<div>There are no contacts without a set location that attend a group with a set location.</div>";
         }
-        echo $output;
+        echo wp_kses_post( $output );
         ?>
         </form>
         <script>
