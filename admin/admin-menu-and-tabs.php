@@ -1296,7 +1296,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             <?php foreach ( $inferrable_contacts as $contact ) : ?>
                 <?php $contact['country_code'] = self::get_country_code_from_phone_number( $contact['phone_number'] ); ?>
                 <?php if ( $last_country_code === null ) : ?>
-                    <b><?php echo esc_html( $contact['country_code']); ?></b>
+                    <b><?php echo esc_html( $contact['country_code'] ); ?></b>
                     <table class="widefat striped location-table">
                         <tr>
                             <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
@@ -1309,7 +1309,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                     <?php if ( $last_country_code !== null ) : ?>
                         </table>
                         <br>
-                        <b><?php echo esc_html( $contact['country_code']); ?></b>
+                        <b><?php echo esc_html( $contact['country_code'] ); ?></b>
                         <br>
                         <br>
                     <?php endif; ?>
@@ -1322,7 +1322,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                         </tr>
                 <?php endif; ?>
                         <tr>
-                            <td><a href="/contacts/<?php echo esc_html( $contact['id']); ?>" target="_blank"><?php echo esc_html( $contact['name'] ); ?></a></td>
+                            <td><a href="/contacts/<?php echo esc_html( $contact['id'] ); ?>" target="_blank"><?php echo esc_html( $contact['name'] ); ?></a></td>
                             <td><?php echo esc_html( $contact['phone_number'] ); ?></td>
                             <td><?php echo esc_html( $contact['country_code'] ); ?></td>
                             <td><button><?php esc_html_e( 'accept', 'disciple_tools_data_top_off' ); ?></button></td>
