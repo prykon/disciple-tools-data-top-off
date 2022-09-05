@@ -1280,33 +1280,55 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
     private function show_location_country_code_table() {
         $locationless_contacts_with_phone_numbers = self::get_locationless_contacts_with_phone_number();
         $inferrable_contacts = self::get_contacts_with_inferrable_locations( $locationless_contacts_with_phone_numbers );
+        $last_country_code = null;
         ?>
-        <!-- <b><?php echo esc_html( count( $locationless_contacts_with_phone_numbers ) ); ?> locations</b> can be inferred from telephone country codes -->
+        <br>
+        <b><?php echo esc_html( count( $inferrable_contacts ) ); ?> locations</b> can be inferred from telephone country codes.
         <br>
         <br>
+        <style>
+            .location-table th {
+                width: 20%;
+            }
+        </style>
         <form method="post">
-            <table class="widefat striped">
-                <input type="hidden" name="accept_location_country_code_nonce" id="accept_location_country_code_nonce" value="<?php echo esc_attr( wp_create_nonce( 'location_country_code_nonce' ) ) ?>" />
-                <tr>
-                    <th><?php esc_html_e( 'ID', 'disciple_tools_data_top_off' ); ?></th>
-                    <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
-                    <th><?php esc_html_e( 'Phone Number', 'disciple_tools_data_top_off' ); ?></th>
-                    <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
-                    <th><?php esc_html_e( 'Actions', 'disciple_tools_data_top_off' ); ?></th>
-                </tr>
-                <?php foreach ( $inferrable_contacts as $contact ) : ?>
-                    <?php if ( !is_null( self::get_country_code_from_phone_number( $contact['phone_number'] ) ) ) : ?>
-                    <tr>
-                        <td><?php echo esc_html( $contact['id'] ); ?></td>
-                        <td><?php echo esc_html( $contact['name'] ); ?></td>
-                        <td><?php echo esc_html( $contact['phone_number'] ); ?></td>
-                        <td><?php echo esc_html( self::get_country_code_from_phone_number( $contact['phone_number'] ) ); ?></td>
-                        <td><button><?php esc_html_e( 'accept', 'disciple_tools_data_top_off' ); ?></button></td>
-                    </tr>
+            <input type="hidden" name="accept_location_country_code_nonce" id="accept_location_country_code_nonce" value="<?php echo esc_attr( wp_create_nonce( 'location_country_code_nonce' ) ) ?>" />
+            <?php foreach ( $inferrable_contacts as $contact ) : ?>
+                <?php $contact['country_code'] = self::get_country_code_from_phone_number( $contact['phone_number'] ); ?>
+                <?php if ( $last_country_code === null ) : ?>
+                    <b><?php echo esc_html( $contact['country_code']); ?></b>
+                    <table class="widefat striped location-table">
+                        <tr>
+                            <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
+                            <th><?php esc_html_e( 'Phone Number', 'disciple_tools_data_top_off' ); ?></th>
+                            <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
+                            <th><?php esc_html_e( 'Actions', 'disciple_tools_data_top_off' ); ?></th>
+                        </tr>
+                <?php endif; ?>
+                <?php if ( $contact['country_code'] !== $last_country_code ) : ?>
+                    <?php if ( $last_country_code !== null ) : ?>
+                        </table>
+                        <br>
+                        <b><?php echo esc_html( $contact['country_code']); ?></b>
+                        <br>
+                        <br>
                     <?php endif; ?>
-                    
-                <?php endforeach; ?>
-            </table>
+                    <table class="widefat striped location-table">
+                        <tr>
+                            <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
+                            <th><?php esc_html_e( 'Phone Number', 'disciple_tools_data_top_off' ); ?></th>
+                            <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
+                            <th><?php esc_html_e( 'Actions', 'disciple_tools_data_top_off' ); ?></th>
+                        </tr>
+                <?php endif; ?>
+                        <tr>
+                            <td><a href="/contacts/<?php echo esc_html( $contact['id']); ?>" target="_blank"><?php echo esc_html( $contact['name'] ); ?></a></td>
+                            <td><?php echo esc_html( $contact['phone_number'] ); ?></td>
+                            <td><?php echo esc_html( $contact['country_code'] ); ?></td>
+                            <td><button><?php esc_html_e( 'accept', 'disciple_tools_data_top_off' ); ?></button></td>
+                        </tr>
+                <?php $last_country_code = $contact['country_code']; ?>
+            <?php endforeach; ?>
         </form>
         <?php
     }
