@@ -434,7 +434,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
     // Get contacts that don't have a gender set
     private function get_genderless_contacts() {
         global $wpdb;
-        $result = $wpdb->get_col(
+        return $wpdb->get_col(
             "SELECT DISTINCT ( pm.post_id )
                 FROM $wpdb->postmeta pm
                 LEFT JOIN $wpdb->posts p
@@ -445,7 +445,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 AND p.post_type = 'contacts'
                 ORDER BY p.post_title ASC;"
         );
-        return $result;
     }
 
     // Get contact names that already have at least one gender set
@@ -853,7 +852,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
 
     private function get_ungendered_by_name( $name ) {
         global $wpdb;
-        $result = $wpdb->get_results(
+        return $wpdb->get_results(
             $wpdb->prepare(
                 "SELECT ID, post_title AS name
                 FROM $wpdb->posts
@@ -866,7 +865,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                 );", $name . '%'
             )
         );
-        return $result;
     }
 
     private function get_first_name( $id ) {
@@ -930,7 +928,23 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         <table class="widefat striped">
             <thead>
                 <tr>
-                    <th><?php esc_html_e( 'Contact Locations from Group Assistance', 'disciple_tools_data_top_off' ); ?></th>
+                    <th><?php esc_html_e( 'Inferr Contact Locations from Phone Country Codes', 'disciple_tools_data_top_off' ); ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <br>
+                <tr>
+                    <td>
+                        <?php self::show_location_country_code_table(); ?>
+                    </td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+        <table class="widefat striped">
+            <thead>
+                <tr>
+                    <th><?php esc_html_e( 'Inferr Contact Locations from Group Assistance', 'disciple_tools_data_top_off' ); ?></th>
                 </tr>
             </thead>
             <tbody>
@@ -942,7 +956,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                 </tr>
             </tbody>
         </table>
-        <br>
         <!-- End Box -->
         <?php
     }
@@ -991,8 +1004,8 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
 
     private function get_missing_location_group_members() {
         global $wpdb;
-        $result = $wpdb->get_results( "
-            SELECT p2p.p2p_to as group_id, p2p.p2p_from as contact_id, pm.meta_value as group_location
+        return $wpdb->get_results(
+            "SELECT p2p.p2p_to as group_id, p2p.p2p_from as contact_id, pm.meta_value as group_location
             FROM wp_p2p p2p
               INNER JOIN wp_postmeta pm
                 ON pm.post_id = p2p.p2p_to
@@ -1004,24 +1017,43 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
                 WHERE meta_key = 'location_grid'
                 )
             " );
-        return $result;
     }
 
     private function get_locationless_group_members( $group_id ) {
         global $wpdb;
-        $result = $wpdb->get_col(
-            $wpdb->prepare( "
-                SELECT p2p_from
-                FROM $wpdb->p2p
-                WHERE p2p_to = %d
-                AND p2p_type = 'contacts_to_groups'
-                AND p2p_from NOT IN (
-                    SELECT post_id
-                    FROM $wpdb->postmeta
-                    WHERE meta_key = 'location_grid'
-                );", $group_id )
+        return $wpdb->get_col(
+            "SELECT DISTINCT ( pm.post_id )
+                FROM $wpdb->postmeta pm
+                LEFT JOIN $wpdb->posts p
+                ON pm.post_id = p.ID
+                WHERE pm.post_id NOT IN (
+                    SELECT post_id FROM $wpdb->postmeta WHERE meta_key like 'contact_phone_%'
+                )
+                AND p.post_type = 'contacts'
+                ORDER BY p.post_title ASC;"
         );
-        return $result;
+    }
+
+    private function get_contacts_with_phone_number() {
+        global $wpdb;
+        return $wpdb->get_col(
+            "SELECT DISTINCT( post_id )
+             FROM $wpdb->postmeta
+             WHERE
+                meta_key LIKE 'contact_phone_%'
+                AND
+                meta_key NOT LIKE '%_details';" );
+    }
+
+    private function filter_contacts_by_locationless( $contacts ) {
+        global $wpdb;
+        return $wpdb->get_col(
+            $wpdb->prepare(
+                "SELECT post_id
+                FROM $wpdb->postmeta
+                "
+            )
+        );
     }
 
     private function set_location_for_group_members( $group_id ) {
@@ -1037,6 +1069,287 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
             update_post_meta( $member_id, 'location_grid', $location );
         }
     }
+
+    private function get_country_code_from_phone_number( $phone_number ) {
+        $all_country_codes = self::get_all_country_codes();
+        $number_country_code = substr( $phone_number, 0, 3 );
+        if ( array_key_exists( $number_country_code, $all_country_codes ) ) {
+            return $all_country_codes[ $number_country_code ];
+        }
+    }
+
+    private function get_all_country_codes() {
+        $country_codes = [
+            '20' => "Egypt",
+            '212' => "Morocco",
+            '213' => "Algeria",
+            '216' => "Tunisia",
+            '218' => "Libya",
+            '220' => "Gambia",
+            '221' => "Senegal",
+            '222' => "Mauritania",
+            '223' => "Mali",
+            '224' => "Guinea",
+            '225' => "Ivory Coast",
+            '226' => "Burkina Faso",
+            '227' => "Niger",
+            '228' => "Togo",
+            '229' => "Benin",
+            '230' => "Mauritius",
+            '231' => "Liberia",
+            '232' => "Sierra Leone",
+            '233' => "Ghana",
+            '234' => "Nigeria",
+            '235' => "Chad",
+            '236' => "Central African Republic",
+            '237' => "Cameroon",
+            '238' => "Cape Verde Islands",
+            '239' => "Sao Tome and Principe",
+            '240' => "Equatorial Guinea",
+            '241' => "Gabon",
+            '243' => "Zaire",
+            '244' => "Angola",
+            '245' => "Guinea-Bissau",
+            '247' => "Ascension Island",
+            '248' => "Seychelles",
+            '249' => "Sudan",
+            '250' => "Rwanda",
+            '251' => "Ethiopia",
+            '252' => "Somalia",
+            '253' => "Djibouti",
+            '254' => "Kenya",
+            '255' => "Tanzania",
+            '256' => "Uganda",
+            '257' => "Burundi",
+            '258' => "Mozambique",
+            '260' => "Zambia",
+            '261' => "Madagascar",
+            '262' => "Reunion, France",
+            '263' => "Zimbabwe",
+            '264' => "Namibia",
+            '265' => "Malawi",
+            '266' => "Lesotho",
+            '267' => "Botswana",
+            '27' => "South Africa",
+            '290' => "St. Helena",
+            '291' => "Eritrea",
+            '297' => "Aruba",
+            '298' => "Faroe Islands",
+            '299' => "Greenland",
+            '30' => "Greece",
+            '31' => "Netherlands",
+            '32' => "Belgium",
+            '345' => "Cayman Islands",
+            '34' => "Spain",
+            '350' => "Gibraltar",
+            '351' => "Portugal",
+            '352' => "Luxembourg",
+            '353' => "Ireland",
+            '354' => "Iceland",
+            '355' => "Albania",
+            '356' => "Malta",
+            '357' => "Cyprus",
+            '358' => "Finland",
+            '359' => "Bulgaria",
+            '36' => "Hungary",
+            '370' => "Lithuania",
+            '371' => "Latvia",
+            '372' => "Estonia",
+            '373' => "Moldova",
+            '374' => "Armenia",
+            '375' => "Belarus",
+            '376' => "Andorra",
+            '378' => "San Marino",
+            '380' => "Ukraine",
+            '385' => "Croatia",
+            '386' => "Slovenia",
+            '387' => "Bosnia and Herzegovina",
+            '389' => "Macedonia",
+            '39' => "Italy",
+            '40' => "Romania",
+            '41' => "Switzerland",
+            '420' => "Czech Republic",
+            '421' => "Slovakia",
+            '423' => "Liechtenstein",
+            '43' => "Austria",
+            '44' => "United Kingdom",
+            '45' => "Denmark",
+            '46' => "Sweden",
+            '47' => "Norway",
+            '48' => "Poland",
+            '49' => "Germany",
+            '500' => "Falkland Islands",
+            '501' => "Belize",
+            '502' => "Guatemala",
+            '503' => "El Salvador",
+            '504' => "Honduras",
+            '505' => "Nicaragua",
+            '506' => "Costa Rica",
+            '507' => "Panama",
+            '508' => "St. Pierre & Miquelon",
+            '509' => "Haiti",
+            '51' => "Peru",
+            '52' => "Mexico",
+            '53' => "Cuba",
+            '54' => "Argentina",
+            '55' => "Brazil",
+            '56' => "Chile",
+            '57' => "Colombia",
+            '58' => "Venezuela",
+            '591' => "Bolivia",
+            '592' => "Guyana",
+            '593' => "Ecuador",
+            '594' => "French Guiana",
+            '595' => "Paraguay",
+            '597' => "Suriname",
+            '598' => "Uruguay",
+            '599' => "Netherlands Antilles",
+            '60' => "Malaysia",
+            '61' => "Australia",
+            '62' => "Indonesia",
+            '63' => "Philippines",
+            '64' => "New Zealand",
+            '65' => "Singapore",
+            '66' => "Thailand",
+            '670' => "Saipan",
+            '671' => "Guam",
+            '672' => "Australian External Territories",
+            '673' => "Brunei Darussalam",
+            '674' => "Nauru",
+            '675' => "Papua New Guinea",
+            '676' => "Tonga",
+            '677' => "Solomon Islands",
+            '678' => "Vanuatu",
+            '679' => "Fiji",
+            '680' => "Palau",
+            '681' => "Wallis and Futuna",
+            '682' => "Cook Islands",
+            '683' => "Niue",
+            '684' => "American Samoa",
+            '685' => "Western Samoa",
+            '686' => "Kiribati Republic",
+            '687' => "New Caledonia",
+            '688' => "Tuvalu",
+            '689' => "Tahiti",
+            '690' => "Tokelau",
+            '691' => "Micronesia",
+            '692' => "Marshall Islands",
+            '767' => "Dominica",
+            '81' => "Japan",
+            '82' => "South Korea",
+            '84' => "Vietnam",
+            '850' => "North Korea",
+            '852' => "Hong Kong",
+            '853' => "Macao",
+            '856' => "Laos",
+            '86' => "China",
+            '876' => "Jamaica",
+            '880' => "Bangladesh",
+            '886' => "Taiwan",
+            '90' => "Turkey",
+            '91' => "India",
+            '92' => "Pakistan",
+            '93' => "Afghanistan",
+            '94' => "Sri Lanka",
+            '95' => "Myanmar",
+            '960' => "Maldives",
+            '961' => "Lebanon",
+            '962' => "Jordan",
+            '963' => "Syria",
+            '964' => "Iraq",
+            '965' => "Kuwait",
+            '966' => "Saudi Arabia",
+            '967' => "Yemen Arab Republic",
+            '968' => "Oman",
+            '971' => "United Arab Emirates",
+            '972' => "Israel",
+            '973' => "Bahrain",
+            '974' => "Qatar",
+            '975' => "Bhutan",
+            '976' => "Mongolia",
+            '977' => "Nepal",
+            '98' => "Iran",
+            '993' => "Turkmenistan",
+            '994' => "Azerbaijan",
+            '995' => "Georgia",
+            '996' => "Kyrgyzstan",
+        ];
+        return $country_codes;
+    }
+
+    private function show_location_country_code_table() {
+        $locationless_contacts_with_phone_numbers = self::get_locationless_contacts_with_phone_number();
+        $inferrable_contacts = self::get_contacts_with_inferrable_locations( $locationless_contacts_with_phone_numbers );
+        ?>
+        <!-- <b><?php echo esc_html( count( $locationless_contacts_with_phone_numbers ) ); ?> locations</b> can be inferred from telephone country codes -->
+        <br>
+        <br>
+        <form method="post">
+            <table class="widefat striped">
+                <input type="hidden" name="accept_location_country_code_nonce" id="accept_location_country_code_nonce" value="<?php echo esc_attr( wp_create_nonce( 'location_country_code_nonce' ) ) ?>" />
+                <tr>
+                    <th><?php esc_html_e( 'ID', 'disciple_tools_data_top_off' ); ?></th>
+                    <th><?php esc_html_e( 'Name', 'disciple_tools_data_top_off' ); ?></th>
+                    <th><?php esc_html_e( 'Phone Number', 'disciple_tools_data_top_off' ); ?></th>
+                    <th><?php esc_html_e( 'Autofill to', 'disciple_tools_data_top_off' ); ?></th>
+                    <th><?php esc_html_e( 'Actions', 'disciple_tools_data_top_off' ); ?></th>
+                </tr>
+                <?php foreach ( $inferrable_contacts as $contact ) : ?>
+                    <?php if ( !is_null( self::get_country_code_from_phone_number( $contact['phone_number'] ) ) ) : ?>
+                    <tr>
+                        <td><?php echo esc_html( $contact['id'] ); ?></td>
+                        <td><?php echo esc_html( $contact['name'] ); ?></td>
+                        <td><?php echo esc_html( $contact['phone_number'] ); ?></td>
+                        <td><?php echo esc_html( self::get_country_code_from_phone_number( $contact['phone_number'] ) ); ?></td>
+                        <td><button><?php esc_html_e( 'accept', 'disciple_tools_data_top_off' ); ?></button></td>
+                    </tr>
+                    <?php endif; ?>
+                    
+                <?php endforeach; ?>
+            </table>
+        </form>
+        <?php
+    }
+
+    private function get_contacts_with_inferrable_locations( $contacts ) {
+        $inferrable_contacts = [];
+        foreach ( $contacts as $contact ) {
+            if ( !is_null( self::get_country_code_from_phone_number( $contact['phone_number'] ) ) ) {
+                $contact['location'] = self::get_country_code_from_phone_number( $contact['phone_number'] );
+                $inferrable_contacts[] = $contact;
+            }
+        }
+        uasort( $inferrable_contacts, function( $a, $b ) {
+            return strcmp( $a['location'], $b['location'] );
+        });
+        return $inferrable_contacts;
+    }
+
+    private function get_locationless_contacts_with_phone_number() {
+        global $wpdb;
+        return $wpdb->get_results(
+            "SELECT
+                pm.post_id AS `id`,
+                p.post_title AS `name`,
+                pm.meta_value AS `phone_number`,
+                LEFT( pm.meta_value, 3 ) AS `country_code`
+             FROM wp_postmeta pm
+                INNER JOIN wp_posts p
+                ON pm.post_id = p.ID
+             WHERE pm.meta_key LIKE 'contact_phone_%'
+                AND pm.meta_key NOT LIKE 'contact_phone_%_details'
+                AND pm.post_id NOT IN (
+                    SELECT pm.post_id FROM wp_postmeta
+                    WHERE pm.meta_key = 'location'
+                )
+             ORDER BY `country_code` ASC;", ARRAY_A
+        );
+    }
+
+    private function get_inferrable_locations_from_phone_country_code() {
+        return [];
+    }
+
     private function show_location_table() {
         // Accept all location suggestions was clicked
         if ( isset( $_POST['accept_location_nonce'] ) && isset( $_POST['locations_add_all'] ) ) {
