@@ -118,7 +118,7 @@ class Disciple_Tools_Data_Top_Off_Menu {
 Disciple_Tools_Data_Top_Off_Menu::instance();
 
 /**
- * Class Disciple_Tools_Data_Top_Off_Tab_Gender
+ * Class Disciple_Tools_Data_Top_Off_Tab_Name
  */
 class Disciple_Tools_Data_Top_Off_Tab_Name {
     public function content() {
@@ -366,23 +366,6 @@ class Disciple_Tools_Data_Top_Off_Tab_Gender {
                             </tbody>
                         </table>
                         <!-- End Namesake Table -->
-                        <br>
-                        <!-- Start E-mail Inference Table -->
-                        <table class="widefat striped">
-                            <thead>
-                                <tr>
-                                    <th><?php esc_html_e( 'Name Inference from E-mails', 'disciple_tools_data_top_off' ); ?></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <tr>
-                                    <td>
-                                        <?php self::show_email_inference_table(); ?>
-                                    </td>
-                                </tr>
-                            </tbody>
-                        </table>
-                        <!-- End E-mail Inference Table -->
                     </div><!-- end post-body-content -->
                     <div id="postbox-container-1" class="postbox-container">
                         <!-- Right Column -->
@@ -899,7 +882,7 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
         ?>
         <div class="wrap">
             <div id="poststuff">
-                <div id="post-body" class="metabox-holder columns-2">
+                <div id="post-body" class="metabox-holder columns-3">
                     <div id="post-body-content">
                         <!-- Main Column -->
 
@@ -907,13 +890,12 @@ class Disciple_Tools_Data_Top_Off_Tab_Location {
 
                         <!-- End Main Column -->
                     </div><!-- end post-body-content -->
-                    <div id="postbox-container-1" class="postbox-container">
-                        <!-- Right Column -->
-
-                        <?php $this->right_column() ?>
-
-                        <!-- End Right Column -->
-                    </div><!-- postbox-container 1 -->
+                    <!-- Right Column -->
+                    <!-- <div id="postbox-container-1" class="postbox-container"> -->
+                        <?php //$this->right_column(); ?>
+                    <!-- </div> -->
+                    <!-- End Right Column -->
+                    <!-- postbox-container 1 -->
                     <div id="postbox-container-2" class="postbox-container">
                     </div><!-- postbox-container 2 -->
                 </div><!-- post-body meta box container -->
