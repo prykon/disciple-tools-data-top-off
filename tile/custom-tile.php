@@ -12,7 +12,7 @@ class Disciple_Tools_Data_Top_Off_Template_Tile
     } // End instance()
 
     public function __construct(){
-        add_filter( 'dt_details_additional_tiles', [ $this, 'dt_details_additional_tiles' ], 10, 2 );
+        add_filter( 'dt_details_additional_tiles', [ $this, 'dt_details_additional_tiles' ], 100, 2 );
         add_action( 'dt_details_additional_section', [ $this, 'dt_add_section' ], 30, 2 );
     }
 
