@@ -50,6 +50,16 @@ class Disciple_Tools_Data_Top_Off_Endpoints
                 },
             ]
         );
+
+        register_rest_route(
+            $namespace, '/get_auto_tags/(?P<id>\d+)', [
+                'methods' => 'GET',
+                'callback' => [ $this, 'get_auto_tags' ],
+                'permission_callback' => function( WP_REST_Request $request ) {
+                    return $this->has_permission();
+                },
+            ]
+        );
     }
 
     public function update_gender( WP_REST_Request $request ) {
@@ -82,6 +92,47 @@ class Disciple_Tools_Data_Top_Off_Endpoints
         ];
         wp_update_post( $post );
         return true;
+    }
+
+    public function get_auto_tags( WP_REST_Request $request ) {
+        $params = $request->get_params();
+        $id = esc_sql( $params['id'] );
+        $all_comments = self::get_comments_by_id( $id );
+        $auto_tags = self::get_tags_from_comments( $all_comments );
+        $auto_tags = array_filter( $auto_tags, function( $item ) {
+            if ( $item >= 2 ) {
+                return $item;
+            }
+        });
+        return $auto_tags;
+    }
+
+    public function get_comments_by_id( $id ) {
+        global $wpdb;
+        $comments = $wpdb->get_col(
+            $wpdb->prepare( "SELECT `comment_content` FROM {$wpdb->prefix}comments WHERE comment_post_id = %d;", $id )
+        );
+        return $comments;
+    }
+
+    public function get_tags_from_comments( $comments ) {
+        $auto_tags = [];
+        foreach ( $comments as $comment ) {
+            $exploded_comment = explode( ' ', $comment );
+            foreach ( $exploded_comment as $ec ) {
+                $ec = self::clean_auto_tag( $ec );
+                $auto_tags[] = $ec;
+            }
+        }
+        $auto_tags = array_count_values( $auto_tags );
+        array_multisort( $auto_tags, SORT_DESC );
+        return $auto_tags;
+    }
+
+    private function clean_auto_tag( $tag ) {
+        $tag = strtolower( $tag );
+        $tag = trim( $tag, ',.!?/\\*()[]{}' );
+        return $tag;
     }
 
     private static $_instance = null;

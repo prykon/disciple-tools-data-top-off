@@ -107,6 +107,15 @@ class Disciple_Tools_Data_Top_Off {
         }
 
         /**
+         * @todo Decide if you want to add a custom tile or settings page tile
+         * To remove: delete the lines below and remove the folder named /tile
+         */
+        require_once( 'tile/custom-tile.php' ); // add custom tile
+        if ( 'settings' === dt_get_url_path() && ! $is_rest ) {
+            require_once( 'tile/settings-tile.php' ); // add custom settings page tile
+        }
+
+        /**
          * @todo Decide if you want to support localization of your plugin
          * To remove: delete the line below and remove the folder named /languages
          */
