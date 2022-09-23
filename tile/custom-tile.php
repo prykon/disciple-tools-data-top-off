@@ -52,11 +52,31 @@ class Disciple_Tools_Data_Top_Off_Template_Tile
                     },
                 } ).done(
                     $.each( function(tags){
-                        $.each(tags, function(key, value){
-                            $('#autotag-tile-content').append(`<div>${key} (${value}) <a href="#">add tag</a></div>`);
+                        console.log(tags);
+                        $.each(tags, function(index,tag){
+                            $('#autotag-tile-content').append(`
+                            <li style="margin-right:5px;">${tag['tag']} (${tag['count']})
+                                <a data-tag="${tag['tag']}" class="autotag_suggestion">add tag</a>
+                            </li>`);
                         })
                     })
                 );
+            </script>
+            <script>
+               $(document).on('click', '.autotag_suggestion', function(){
+                var post_id = window.detailsSettings.post_id;
+                var tag = $(this).data('tag');
+                $(this).parent().remove();
+                   $.ajax({
+                       type: "POST",
+                       contentType: "application/json; charset=utf-8",
+                       dataType: "json",
+                       url: window.location.origin + '/wp-json/disciple-tools-data-top-off/v1/add_tag/' + post_id + '/' + tag,
+                       beforeSend: function(xhr) {
+                           xhr.setRequestHeader('X-WP-Nonce', '<?php echo esc_attr( wp_create_nonce( 'wp_rest' ) ); ?>' );
+                        },
+                   }) 
+               }); 
             </script>
         <?php }
     }
